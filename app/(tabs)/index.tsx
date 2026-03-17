@@ -1,98 +1,139 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const TOPICS = [
+  { id: '1', title: 'Greetings & Basics', emoji: '👋', wordCount: 10, color: '#4F46E5' },
+  { id: '2', title: 'Numbers & Time', emoji: '🔢', wordCount: 15, color: '#7C3AED' },
+  { id: '3', title: 'Food & Restaurant', emoji: '🍜', wordCount: 20, color: '#DB2777' },
+  { id: '4', title: 'Transport & Directions', emoji: '🚇', wordCount: 12, color: '#059669' },
+  { id: '5', title: 'University Life', emoji: '🎓', wordCount: 18, color: '#D97706' },
+];
 
 export default function HomeScreen() {
+  const router = useRouter();
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.appName}>Clairo</Text>
+        <Text style={styles.subtitle}>Learn Chinese your way</Text>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* Stats Row */}
+      <View style={styles.statsRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statNumber}>5</Text>
+          <Text style={styles.statLabel}>Topics</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statNumber}>75</Text>
+          <Text style={styles.statLabel}>Words</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statLabel}>Day Streak 🔥</Text>
+        </View>
+      </View>
+
+      {/* Topics List */}
+      <Text style={styles.sectionTitle}>Topics</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {TOPICS.map((topic) => (
+          <TouchableOpacity
+            key={topic.id}
+            style={[styles.topicCard, { borderLeftColor: topic.color }]}
+            onPress={() => router.push('/flashcard')}
+          >
+            <Text style={styles.topicEmoji}>{topic.emoji}</Text>
+            <View style={styles.topicInfo}>
+              <Text style={styles.topicTitle}>{topic.title}</Text>
+              <Text style={styles.topicMeta}>{topic.wordCount} words</Text>
+            </View>
+            <Text style={styles.arrow}>→</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+  header: {
+    marginBottom: 30,
+  },
+  appName: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 4,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 30,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  topicCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 12,
+    borderLeftWidth: 4,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  topicEmoji: {
+    fontSize: 28,
+    marginRight: 14,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  topicInfo: {
+    flex: 1,
+  },
+  topicTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  topicMeta: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  arrow: {
+    fontSize: 18,
+    color: '#888',
   },
 });
