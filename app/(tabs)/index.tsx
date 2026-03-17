@@ -1,16 +1,34 @@
-import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const TOPICS = [
-  { id: '1', title: 'Greetings & Basics', emoji: '👋', wordCount: 10, color: '#4F46E5' },
-  { id: '2', title: 'Numbers & Time', emoji: '🔢', wordCount: 15, color: '#7C3AED' },
-  { id: '3', title: 'Food & Restaurant', emoji: '🍜', wordCount: 20, color: '#DB2777' },
-  { id: '4', title: 'Transport & Directions', emoji: '🚇', wordCount: 12, color: '#059669' },
-  { id: '5', title: 'University Life', emoji: '🎓', wordCount: 18, color: '#D97706' },
-];
+type Topic = {
+  id: string;
+  title: string;
+  emoji: string;
+  color: string;
+};
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchTopics();
+    }, [])
+  );
+
+  const fetchTopics = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('topics').select('*');
+    if (error) console.error(error);
+    else setTopics(data || []);
+    setLoading(false);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -19,40 +37,34 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>Learn Chinese your way</Text>
       </View>
 
-      {/* Stats Row */}
-      <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>5</Text>
-          <Text style={styles.statLabel}>Topics</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>75</Text>
-          <Text style={styles.statLabel}>Words</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Day Streak 🔥</Text>
-        </View>
-      </View>
-
       {/* Topics List */}
       <Text style={styles.sectionTitle}>Topics</Text>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {TOPICS.map((topic) => (
-          <TouchableOpacity
-            key={topic.id}
-            style={[styles.topicCard, { borderLeftColor: topic.color }]}
-            onPress={() => router.push('/flashcard')}
-          >
-            <Text style={styles.topicEmoji}>{topic.emoji}</Text>
-            <View style={styles.topicInfo}>
-              <Text style={styles.topicTitle}>{topic.title}</Text>
-              <Text style={styles.topicMeta}>{topic.wordCount} words</Text>
-            </View>
-            <Text style={styles.arrow}>→</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+
+      {loading ? (
+        <ActivityIndicator color="#4F46E5" size="large" style={{ marginTop: 40 }} />
+      ) : topics.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyEmoji}>📭</Text>
+          <Text style={styles.emptyText}>No topics yet</Text>
+          <Text style={styles.emptySubtext}>Add your first topic from the Admin panel</Text>
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {topics.map((topic) => (
+            <TouchableOpacity
+              key={topic.id}
+              style={[styles.topicCard, { borderLeftColor: topic.color }]}
+              onPress={() => router.push({ pathname: '/flashcard', params: { topicId: topic.id, topicTitle: topic.title } })}
+            >
+              <Text style={styles.topicEmoji}>{topic.emoji}</Text>
+              <View style={styles.topicInfo}>
+                <Text style={styles.topicTitle}>{topic.title}</Text>
+              </View>
+              <Text style={styles.arrow}>→</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -75,28 +87,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#888',
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 30,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  statLabel: {
-    fontSize: 12,
     color: '#888',
     marginTop: 4,
   },
@@ -127,13 +117,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  topicMeta: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
   arrow: {
     fontSize: 18,
     color: '#888',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 80,
+  },
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
   },
 });
