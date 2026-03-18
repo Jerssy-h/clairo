@@ -1,37 +1,100 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const CARDS = [
-  { id: '1', chinese: '你好', pinyin: 'nǐ hǎo', english: 'Hello' },
-  { id: '2', chinese: '谢谢', pinyin: 'xiè xiè', english: 'Thank you' },
-  { id: '3', chinese: '再见', pinyin: 'zài jiàn', english: 'Goodbye' },
-  { id: '4', chinese: '对不起', pinyin: 'duì bu qǐ', english: 'Sorry' },
-  { id: '5', chinese: '没关系', pinyin: 'méi guān xi', english: 'No problem' },
-];
+type Word = {
+  id: string;
+  chinese: string;
+  pinyin: string;
+  english: string;
+};
 
 export default function FlashcardScreen() {
   const router = useRouter();
+  const { topicId, topicTitle } = useLocalSearchParams();
+  const [words, setWords] = useState<Word[]>([]);
+  const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState(0);
   const [unknown, setUnknown] = useState(0);
+  const [finished, setFinished] = useState(false);
 
-  const card = CARDS[index];
-  const isLast = index === CARDS.length - 1;
+  useEffect(() => {
+    fetchWords();
+  }, []);
+
+  const fetchWords = async () => {
+    const { data, error } = await supabase
+      .from('words')
+      .select('*')
+      .eq('topic_id', topicId);
+    if (error) console.error(error);
+    else setWords(data || []);
+    setLoading(false);
+  };
 
   const handleNext = (didKnow: boolean) => {
+    const newKnown = didKnow ? known + 1 : known;
+    const newUnknown = !didKnow ? unknown + 1 : unknown;
+
     if (didKnow) setKnown(k => k + 1);
     else setUnknown(u => u + 1);
 
-    if (isLast) {
-      alert(`Done! ✅ ${known + (didKnow ? 1 : 0)} known, ${unknown + (!didKnow ? 1 : 0)} to review`);
-      router.back();
+    if (index === words.length - 1) {
+      setFinished(true);
       return;
     }
     setIndex(i => i + 1);
     setFlipped(false);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#4F46E5" size="large" />
+      </View>
+    );
+  }
+
+  if (words.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyEmoji}>📭</Text>
+        <Text style={styles.emptyText}>No words in this topic yet</Text>
+        <Text style={styles.emptySubtext}>Add words from the Admin panel</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>← Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (finished) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.finishedEmoji}>🎉</Text>
+        <Text style={styles.finishedTitle}>Session Complete!</Text>
+        <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
+        <View style={styles.resultsRow}>
+          <View style={styles.resultBox}>
+            <Text style={styles.resultNumber}>{known}</Text>
+            <Text style={styles.resultLabel}>Known ✅</Text>
+          </View>
+          <View style={styles.resultBox}>
+            <Text style={styles.resultNumber}>{unknown}</Text>
+            <Text style={styles.resultLabel}>Review ❌</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>← Back to Topics</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const card = words[index];
 
   return (
     <View style={styles.container}>
@@ -40,29 +103,26 @@ export default function FlashcardScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.progress}>{index + 1} / {CARDS.length}</Text>
+        <Text style={styles.topicName}>{topicTitle}</Text>
+        <Text style={styles.progress}>{index + 1}/{words.length}</Text>
       </View>
 
       {/* Progress Bar */}
       <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${((index + 1) / CARDS.length) * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%` }]} />
       </View>
 
       {/* Card */}
       <TouchableOpacity style={styles.card} onPress={() => setFlipped(f => !f)}>
-        {!flipped ? (
-          <View style={styles.cardInner}>
-            <Text style={styles.chinese}>{card.chinese}</Text>
-            <Text style={styles.pinyin}>{card.pinyin}</Text>
-            <Text style={styles.hint}>Tap to reveal</Text>
-          </View>
-        ) : (
-          <View style={styles.cardInner}>
-            <Text style={styles.chinese}>{card.chinese}</Text>
-            <Text style={styles.pinyin}>{card.pinyin}</Text>
+        <View style={styles.cardInner}>
+          <Text style={styles.chinese}>{card.chinese}</Text>
+          <Text style={styles.pinyin}>{card.pinyin}</Text>
+          {flipped ? (
             <Text style={styles.english}>{card.english}</Text>
-          </View>
-        )}
+          ) : (
+            <Text style={styles.hint}>Tap to reveal</Text>
+          )}
+        </View>
       </TouchableOpacity>
 
       {/* Buttons */}
@@ -87,6 +147,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
   },
+  center: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -96,6 +163,11 @@ const styles = StyleSheet.create({
   back: {
     color: '#888',
     fontSize: 16,
+  },
+  topicName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   progress: {
     color: '#888',
@@ -163,6 +235,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 30,
+  },
+  finishedEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  finishedTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  finishedSubtitle: {
+    fontSize: 16,
+    color: '#888',
+    marginBottom: 30,
+  },
+  resultsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 40,
+  },
+  resultBox: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  resultNumber: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  resultLabel: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 4,
+  },
+  backBtn: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  backBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
