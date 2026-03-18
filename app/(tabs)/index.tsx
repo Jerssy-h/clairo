@@ -8,6 +8,7 @@ type Topic = {
   title: string;
   emoji: string;
   color: string;
+  word_count: number;
 };
 
 export default function HomeScreen() {
@@ -23,7 +24,7 @@ export default function HomeScreen() {
 
   const fetchTopics = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('topics').select('*');
+    const { data, error } = await supabase.from('topics_with_count').select('*');
     if (error) console.error(error);
     else setTopics(data || []);
     setLoading(false);
@@ -54,11 +55,12 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={topic.id}
               style={[styles.topicCard, { borderLeftColor: topic.color }]}
-              onPress={() => router.push({ pathname: '/flashcard', params: { topicId: topic.id, topicTitle: topic.title } })}
+              onPress={() => router.push({ pathname: '/topic', params: { topicId: topic.id, topicTitle: topic.title, topicColor: topic.color, topicEmoji: topic.emoji } })}
             >
               <Text style={styles.topicEmoji}>{topic.emoji}</Text>
               <View style={styles.topicInfo}>
-                <Text style={styles.topicTitle}>{topic.title}</Text>
+              <Text style={styles.topicTitle}>{topic.title}</Text>
+              <Text style={styles.topicMeta}>{topic.word_count} words</Text>
               </View>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>
@@ -141,5 +143,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     textAlign: 'center',
+  },
+  topicMeta: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
   },
 });

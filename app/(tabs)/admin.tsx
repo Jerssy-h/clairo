@@ -26,8 +26,12 @@ type Word = {
 };
 
 const COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2'];
+const ADMIN_PASSWORD = 'clairo2026';
 
 export default function AdminScreen() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [words, setWords] = useState<Word[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
@@ -42,12 +46,21 @@ export default function AdminScreen() {
   const [english, setEnglish] = useState('');
 
   useEffect(() => {
-    fetchTopics();
-  }, []);
+    if (authenticated) fetchTopics();
+  }, [authenticated]);
 
   useEffect(() => {
     fetchWords();
   }, [selectedTopic]);
+
+  const handleLogin = () => {
+    if (passwordInput === ADMIN_PASSWORD) {
+      setAuthenticated(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+    }
+  };
 
   const fetchTopics = async () => {
     const { data } = await supabase.from('topics').select('*');
@@ -155,6 +168,30 @@ export default function AdminScreen() {
     );
   };
 
+  if (!authenticated) {
+    return (
+      <View style={styles.authContainer}>
+        <Text style={styles.authEmoji}>🔐</Text>
+        <Text style={styles.authTitle}>Admin Access</Text>
+        <Text style={styles.authSubtitle}>Enter password to continue</Text>
+        <TextInput
+          style={[styles.input, passwordError && styles.inputError]}
+          placeholder="Password"
+          placeholderTextColor="#555"
+          value={passwordInput}
+          onChangeText={setPasswordInput}
+          secureTextEntry
+        />
+        {passwordError && (
+          <Text style={styles.errorText}>Wrong password. Try again.</Text>
+        )}
+        <TouchableOpacity style={styles.btn} onPress={handleLogin}>
+          <Text style={styles.btnText}>Enter</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Admin Panel</Text>
@@ -203,7 +240,7 @@ export default function AdminScreen() {
               <Text style={styles.topicRowEmoji}>{t.emoji}</Text>
               <Text style={styles.topicRowTitle}>{t.title}</Text>
               <TouchableOpacity onPress={() => deleteTopic(t.id)} style={styles.deleteBtn}>
-                <Text style={styles.deleteBtnText}>❌</Text>
+                <Text style={styles.deleteBtnText}>🗑️</Text>
               </TouchableOpacity>
             </View>
           ))
@@ -266,7 +303,7 @@ export default function AdminScreen() {
                   <Text style={styles.wordPinyin}>{w.pinyin}</Text>
                 </View>
                 <TouchableOpacity onPress={() => deleteWord(w.id)} style={styles.deleteBtn}>
-                  <Text style={styles.deleteBtnText}>❌</Text>
+                  <Text style={styles.deleteBtnText}>🗑️</Text>
                 </TouchableOpacity>
               </View>
             ))
@@ -278,6 +315,36 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
+  authContainer: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  authEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  authTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  authSubtitle: {
+    fontSize: 15,
+    color: '#888',
+    marginBottom: 32,
+  },
+  inputError: {
+    borderColor: '#FF4444',
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 13,
+    marginBottom: 12,
+  },
   container: {
     flex: 1,
     backgroundColor: '#0F0F0F',
@@ -316,6 +383,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#2A2A2A',
+    width: '100%',
   },
   colorRow: {
     flexDirection: 'row',
@@ -336,6 +404,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    width: '100%',
   },
   btnText: {
     color: '#FFFFFF',
