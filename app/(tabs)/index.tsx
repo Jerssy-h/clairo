@@ -9,6 +9,7 @@ type Topic = {
   emoji: string;
   color: string;
   word_count: number;
+  known_count: number;
 };
 
 export default function HomeScreen() {
@@ -55,12 +56,28 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={topic.id}
               style={[styles.topicCard, { borderLeftColor: topic.color }]}
-              onPress={() => router.push({ pathname: '/topic', params: { topicId: topic.id, topicTitle: topic.title, topicColor: topic.color, topicEmoji: topic.emoji } })}
+              onPress={() => router.push({
+                pathname: '/topic',
+                params: {
+                  topicId: topic.id,
+                  topicTitle: topic.title,
+                  topicColor: topic.color,
+                  topicEmoji: topic.emoji,
+                }
+              })}
             >
               <Text style={styles.topicEmoji}>{topic.emoji}</Text>
               <View style={styles.topicInfo}>
-              <Text style={styles.topicTitle}>{topic.title}</Text>
-              <Text style={styles.topicMeta}>{topic.word_count} words</Text>
+                <Text style={styles.topicTitle}>{topic.title}</Text>
+                <Text style={styles.topicMeta}>{topic.known_count}/{topic.word_count} words known</Text>
+                <View style={styles.topicProgressBar}>
+                  <View style={[styles.topicProgressFill, {
+                    width: topic.word_count > 0
+                      ? `${Math.round((topic.known_count / topic.word_count) * 100)}%`
+                      : '0%',
+                    backgroundColor: topic.color,
+                  }]} />
+                </View>
               </View>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>
@@ -119,6 +136,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  topicMeta: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  topicProgressBar: {
+    height: 4,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 2,
+    marginTop: 6,
+    width: '100%',
+  },
+  topicProgressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
   arrow: {
     fontSize: 18,
     color: '#888',
@@ -143,10 +176,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     textAlign: 'center',
-  },
-  topicMeta: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
   },
 });

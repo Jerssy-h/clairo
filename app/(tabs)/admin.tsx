@@ -45,6 +45,9 @@ export default function AdminScreen() {
   const [pinyin, setPinyin] = useState('');
   const [english, setEnglish] = useState('');
 
+  const [russian, setRussian] = useState('');
+  const [chineseWords, setChineseWords] = useState('');
+
   useEffect(() => {
     if (authenticated) fetchTopics();
   }, [authenticated]);
@@ -166,6 +169,36 @@ export default function AdminScreen() {
         },
       ]
     );
+  };
+
+  const addSentence = async () => {
+    if (!selectedTopic) {
+      Alert.alert('Select a topic first');
+      return;
+    }
+    if (!russian || !chineseWords) {
+      Alert.alert('Missing fields', 'Please fill in all sentence fields');
+      return;
+    }
+    const wordsArray = chineseWords.split(' ').filter(w => w.trim() !== '');
+    if (wordsArray.length < 2) {
+      Alert.alert('Too short', 'Add at least 2 Chinese words');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.from('sentences').insert({
+      topic_id: selectedTopic.id,
+      russian,
+      chinese_words: [...wordsArray].sort(() => Math.random() - 0.5),
+      correct_order: wordsArray,
+    });
+    if (error) Alert.alert('Error', error.message);
+    else {
+      Alert.alert('✅ Sentence added!');
+      setRussian('');
+      setChineseWords('');
+    }
+    setLoading(false);
   };
 
   if (!authenticated) {
@@ -310,6 +343,33 @@ export default function AdminScreen() {
           )}
         </View>
       )}
+
+      {/* Add Sentence Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Add Sentence Builder</Text>
+        <Text style={styles.label}>Select topic first from above ↑</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Russian sentence (e.g. Меня зовут Эмир)"
+          placeholderTextColor="#555"
+          value={russian}
+          onChangeText={setRussian}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Chinese words in order, space separated (e.g. 我 叫 埃米尔)"
+          placeholderTextColor="#555"
+          value={chineseWords}
+          onChangeText={setChineseWords}
+        />
+        <Text style={styles.label}>
+          ⚠️ Type each Chinese word separated by a space. Order matters — type the correct order.
+        </Text>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: '#059669' }]} onPress={addSentence} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Sentence</Text>}
+        </TouchableOpacity>
+      </View>
+
     </ScrollView>
   );
 }

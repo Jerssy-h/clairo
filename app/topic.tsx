@@ -40,6 +40,14 @@ export default function TopicScreen() {
       minWords: 4,
     },
     {
+        id: 'sentence',
+        emoji: '🧩',
+        title: 'Sentence Builder',
+        description: 'Arrange Chinese words in correct order',
+        color: '#059669',
+        minWords: 1,
+      },
+    {
       id: 'pinyin',
       emoji: '✍️',
       title: 'Write Pinyin',
@@ -57,6 +65,10 @@ export default function TopicScreen() {
       alert(msg);
       return;
     }
+    if (activityId === 'sentence') {
+        router.push({ pathname: '/sentence', params: { topicId, topicTitle } });
+        return;
+      }
     if (activityId === 'pinyin') {
       alert('Coming soon! 🚧');
       return;

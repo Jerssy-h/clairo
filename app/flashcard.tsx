@@ -1,3 +1,4 @@
+import { getDeviceId } from '@/lib/device';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -20,10 +21,17 @@ export default function FlashcardScreen() {
   const [known, setKnown] = useState(0);
   const [unknown, setUnknown] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [deviceId, setDeviceId] = useState('');
 
   useEffect(() => {
-    fetchWords();
+    setup();
   }, []);
+
+  const setup = async () => {
+    const id = await getDeviceId();
+    setDeviceId(id);
+    fetchWords();
+  };
 
   const fetchWords = async () => {
     const { data, error } = await supabase
@@ -35,9 +43,19 @@ export default function FlashcardScreen() {
     setLoading(false);
   };
 
-  const handleNext = (didKnow: boolean) => {
-    const newKnown = didKnow ? known + 1 : known;
-    const newUnknown = !didKnow ? unknown + 1 : unknown;
+  const saveProgress = async (wordId: string, isKnown: boolean) => {
+    if (!deviceId) return;
+    await supabase.from('progress').upsert({
+      device_id: deviceId,
+      word_id: wordId,
+      known: isKnown,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'device_id,word_id' });
+  };
+
+  const handleNext = async (didKnow: boolean) => {
+    const currentWord = words[index];
+    await saveProgress(currentWord.id, didKnow);
 
     if (didKnow) setKnown(k => k + 1);
     else setUnknown(u => u + 1);
@@ -98,7 +116,6 @@ export default function FlashcardScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Progress */}
       <View style={styles.progressRow}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.back}>← Back</Text>
@@ -107,12 +124,10 @@ export default function FlashcardScreen() {
         <Text style={styles.progress}>{index + 1}/{words.length}</Text>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%` }]} />
       </View>
 
-      {/* Card */}
       <TouchableOpacity style={styles.card} onPress={() => setFlipped(f => !f)}>
         <View style={styles.cardInner}>
           <Text style={styles.chinese}>{card.chinese}</Text>
@@ -125,7 +140,6 @@ export default function FlashcardScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Buttons */}
       {flipped && (
         <View style={styles.buttons}>
           <TouchableOpacity style={styles.btnNo} onPress={() => handleNext(false)}>
