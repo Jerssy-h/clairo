@@ -1,6 +1,9 @@
+import Logo from '@/components/Logo';
+import { isAdmin } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -24,10 +27,22 @@ type Topic = {
   known_count: number;
 };
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return '早上好 · Good morning';
+  if (hour < 18) return '下午好 · Good afternoon';
+  return '晚上好 · Good evening';
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminMode, setAdminMode] = useState(false);
+
+  useEffect(() => {
+    isAdmin().then(setAdminMode);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -46,7 +61,6 @@ export default function HomeScreen() {
   const totalWords = topics.reduce((sum, t) => sum + t.word_count, 0);
   const totalKnown = topics.reduce((sum, t) => sum + t.known_count, 0);
   const overallProgress = totalWords > 0 ? Math.round((totalKnown / totalWords) * 100) : 0;
-
   const recentTopic = topics.find(t => t.known_count > 0) || topics[0];
 
   return (
@@ -58,9 +72,22 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Good morning</Text>
-          <Text style={styles.appName}>Clairo</Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => adminMode && router.push('/admin')}
+              activeOpacity={adminMode ? 0.7 : 1}
+            >
+              <Logo size={56} />
+            </TouchableOpacity>
+            <View style={styles.headerText}>
+              <Text style={styles.appName}>Clairo</Text>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+            </View>
+          </View>
         </View>
+
+        {/* Divider */}
+        <View style={styles.divider} />
 
         {/* Continue Card */}
         {recentTopic && (
@@ -77,11 +104,16 @@ export default function HomeScreen() {
             })}
             activeOpacity={0.85}
           >
-            <View style={styles.continueCardOverlay}>
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.55)']}
+              style={styles.continueCardOverlay}
+            >
               <Text style={styles.continueLabel}>CONTINUE LEARNING</Text>
               <Text style={styles.continueEmoji}>{recentTopic.emoji}</Text>
               <Text style={styles.continueTitle}>{recentTopic.title}</Text>
-              <Text style={styles.continueMeta}>{recentTopic.known_count}/{recentTopic.word_count} words known</Text>
+              <Text style={styles.continueMeta}>
+                {recentTopic.known_count}/{recentTopic.word_count} words known
+              </Text>
               <View style={styles.continueProgressBar}>
                 <View style={[styles.continueProgressFill, {
                   width: recentTopic.word_count > 0
@@ -89,7 +121,7 @@ export default function HomeScreen() {
                     : '0%'
                 }]} />
               </View>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
         )}
 
@@ -154,6 +186,10 @@ export default function HomeScreen() {
                     }]} />
                   </View>
                   <Text style={[styles.gridPercent, { color: topic.color }]}>{progress}%</Text>
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.4)']}
+                    style={styles.gridGradient}
+                  />
                 </TouchableOpacity>
               );
             })}
@@ -175,20 +211,36 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  greeting: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    marginBottom: 4,
-    fontWeight: '500',
-    letterSpacing: 0.5,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  headerText: {
+    justifyContent: 'center',
   },
   appName: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -1,
+    letterSpacing: -0.5,
+  },
+  greeting: {
+    fontSize: 13,
+    color: '#B3B3B3',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#2C2C2E',
+    marginHorizontal: 20,
+    marginBottom: 24,
   },
   continueCard: {
     marginHorizontal: 20,
@@ -199,7 +251,6 @@ const styles = StyleSheet.create({
   },
   continueCardOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
     padding: 20,
     justifyContent: 'flex-end',
   },
@@ -208,7 +259,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(255,255,255,0.7)',
     letterSpacing: 1.5,
-    marginBottom: 8,
     position: 'absolute',
     top: 20,
     left: 20,
@@ -320,6 +370,15 @@ const styles = StyleSheet.create({
   gridPercent: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  gridGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
   },
   emptyState: {
     alignItems: 'center',

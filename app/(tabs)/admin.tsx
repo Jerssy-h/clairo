@@ -1,13 +1,15 @@
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert,
+  ActivityIndicator,
+  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
 type Topic = {
@@ -15,6 +17,7 @@ type Topic = {
   title: string;
   emoji: string;
   color: string;
+  sort_order: number;
 };
 
 type Word = {
@@ -25,35 +28,60 @@ type Word = {
   topic_id: string;
 };
 
+type Sentence = {
+  id: string;
+  russian: string;
+  chinese_words: string[];
+  correct_order: string[];
+  topic_id: string;
+};
+
 const COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2'];
-const ADMIN_PASSWORD = 'clairo2026';
+const ADMIN_PASSWORD = 'clairo2024';
 
 export default function AdminScreen() {
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
+
+  // Data
   const [topics, setTopics] = useState<Topic[]>([]);
   const [words, setWords] = useState<Word[]>([]);
+  const [sentences, setSentences] = useState<Sentence[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Active tab
+  const [tab, setTab] = useState<'topics' | 'words' | 'sentences'>('topics');
+
+  // Topic form
   const [topicTitle, setTopicTitle] = useState('');
   const [topicEmoji, setTopicEmoji] = useState('');
   const [topicColor, setTopicColor] = useState(COLORS[0]);
 
+  // Word form
   const [chinese, setChinese] = useState('');
   const [pinyin, setPinyin] = useState('');
   const [english, setEnglish] = useState('');
 
+  // Sentence form
   const [russian, setRussian] = useState('');
   const [chineseWords, setChineseWords] = useState('');
+
+  // Edit modals
+  const [editTopic, setEditTopic] = useState<Topic | null>(null);
+  const [editWord, setEditWord] = useState<Word | null>(null);
+  const [editSentence, setEditSentence] = useState<Sentence | null>(null);
 
   useEffect(() => {
     if (authenticated) fetchTopics();
   }, [authenticated]);
 
   useEffect(() => {
-    fetchWords();
+    if (selectedTopic) {
+      fetchWords();
+      fetchSentences();
+    }
   }, [selectedTopic]);
 
   const handleLogin = () => {
@@ -66,7 +94,10 @@ export default function AdminScreen() {
   };
 
   const fetchTopics = async () => {
-    const { data } = await supabase.from('topics').select('*');
+    const { data } = await supabase
+      .from('topics')
+      .select('*')
+      .order('sort_order', { ascending: true });
     setTopics(data || []);
   };
 
@@ -79,6 +110,16 @@ export default function AdminScreen() {
     setWords(data || []);
   };
 
+  const fetchSentences = async () => {
+    if (!selectedTopic) return;
+    const { data } = await supabase
+      .from('sentences')
+      .select('*')
+      .eq('topic_id', selectedTopic.id);
+    setSentences(data || []);
+  };
+
+  // TOPICS
   const addTopic = async () => {
     if (!topicTitle || !topicEmoji) {
       Alert.alert('Missing fields', 'Please fill in title and emoji');
@@ -89,10 +130,10 @@ export default function AdminScreen() {
       title: topicTitle,
       emoji: topicEmoji,
       color: topicColor,
+      sort_order: topics.length,
     });
     if (error) Alert.alert('Error', error.message);
     else {
-      Alert.alert('✅ Topic added!');
       setTopicTitle('');
       setTopicEmoji('');
       fetchTopics();
@@ -100,84 +141,105 @@ export default function AdminScreen() {
     setLoading(false);
   };
 
-  const deleteTopic = async (id: string) => {
-    Alert.alert(
-      'Delete Topic',
-      'This will delete the topic and all its words. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase.from('topics').delete().eq('id', id);
-            if (error) Alert.alert('Error', error.message);
-            else {
-              fetchTopics();
-              if (selectedTopic?.id === id) {
-                setSelectedTopic(null);
-                setWords([]);
-              }
-            }
-          },
-        },
-      ]
-    );
+  const updateTopic = async () => {
+    if (!editTopic) return;
+    setLoading(true);
+    const { error } = await supabase.from('topics').update({
+      title: editTopic.title,
+      emoji: editTopic.emoji,
+      color: editTopic.color,
+    }).eq('id', editTopic.id);
+    if (error) Alert.alert('Error', error.message);
+    else {
+      setEditTopic(null);
+      fetchTopics();
+    }
+    setLoading(false);
   };
 
+  const deleteTopic = async (id: string) => {
+    Alert.alert('Delete Topic', 'This will delete the topic and all its content. Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          await supabase.from('topics').delete().eq('id', id);
+          if (selectedTopic?.id === id) {
+            setSelectedTopic(null);
+            setWords([]);
+            setSentences([]);
+          }
+          fetchTopics();
+        },
+      },
+    ]);
+  };
+
+  const moveTopic = async (index: number, direction: 'up' | 'down') => {
+    const newTopics = [...topics];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newTopics.length) return;
+    [newTopics[index], newTopics[swapIndex]] = [newTopics[swapIndex], newTopics[index]];
+    setTopics(newTopics);
+    await Promise.all(newTopics.map((t, i) =>
+      supabase.from('topics').update({ sort_order: i }).eq('id', t.id)
+    ));
+  };
+
+  // WORDS
   const addWord = async () => {
-    if (!selectedTopic) {
-      Alert.alert('Select a topic first');
-      return;
-    }
+    if (!selectedTopic) { Alert.alert('Select a topic first'); return; }
     if (!chinese || !pinyin || !english) {
-      Alert.alert('Missing fields', 'Please fill in all word fields');
+      Alert.alert('Missing fields', 'Please fill in all fields');
       return;
     }
     setLoading(true);
     const { error } = await supabase.from('words').insert({
       topic_id: selectedTopic.id,
-      chinese,
-      pinyin,
-      english,
+      chinese, pinyin, english,
     });
     if (error) Alert.alert('Error', error.message);
     else {
-      Alert.alert('✅ Word added!');
-      setChinese('');
-      setPinyin('');
-      setEnglish('');
+      setChinese(''); setPinyin(''); setEnglish('');
+      fetchWords();
+    }
+    setLoading(false);
+  };
+
+  const updateWord = async () => {
+    if (!editWord) return;
+    setLoading(true);
+    const { error } = await supabase.from('words').update({
+      chinese: editWord.chinese,
+      pinyin: editWord.pinyin,
+      english: editWord.english,
+    }).eq('id', editWord.id);
+    if (error) Alert.alert('Error', error.message);
+    else {
+      setEditWord(null);
       fetchWords();
     }
     setLoading(false);
   };
 
   const deleteWord = async (id: string) => {
-    Alert.alert(
-      'Delete Word',
-      'Are you sure you want to delete this word?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase.from('words').delete().eq('id', id);
-            if (error) Alert.alert('Error', error.message);
-            else fetchWords();
-          },
+    Alert.alert('Delete Word', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          await supabase.from('words').delete().eq('id', id);
+          fetchWords();
         },
-      ]
-    );
+      },
+    ]);
   };
 
+  // SENTENCES
   const addSentence = async () => {
-    if (!selectedTopic) {
-      Alert.alert('Select a topic first');
-      return;
-    }
+    if (!selectedTopic) { Alert.alert('Select a topic first'); return; }
     if (!russian || !chineseWords) {
-      Alert.alert('Missing fields', 'Please fill in all sentence fields');
+      Alert.alert('Missing fields', 'Please fill in all fields');
       return;
     }
     const wordsArray = chineseWords.split(' ').filter(w => w.trim() !== '');
@@ -194,19 +256,48 @@ export default function AdminScreen() {
     });
     if (error) Alert.alert('Error', error.message);
     else {
-      Alert.alert('✅ Sentence added!');
-      setRussian('');
-      setChineseWords('');
+      setRussian(''); setChineseWords('');
+      fetchSentences();
     }
     setLoading(false);
   };
 
+  const updateSentence = async () => {
+    if (!editSentence) return;
+    const wordsArray = editSentence.correct_order;
+    setLoading(true);
+    const { error } = await supabase.from('sentences').update({
+      russian: editSentence.russian,
+      correct_order: wordsArray,
+      chinese_words: [...wordsArray].sort(() => Math.random() - 0.5),
+    }).eq('id', editSentence.id);
+    if (error) Alert.alert('Error', error.message);
+    else {
+      setEditSentence(null);
+      fetchSentences();
+    }
+    setLoading(false);
+  };
+
+  const deleteSentence = async (id: string) => {
+    Alert.alert('Delete Sentence', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          await supabase.from('sentences').delete().eq('id', id);
+          fetchSentences();
+        },
+      },
+    ]);
+  };
+
+  // AUTH SCREEN
   if (!authenticated) {
     return (
       <View style={styles.authContainer}>
         <Text style={styles.authEmoji}>🔐</Text>
-        <Text style={styles.authTitle}>Admin Access</Text>
-        <Text style={styles.authSubtitle}>Enter password to continue</Text>
+        <Text style={styles.authTitle}>Admin</Text>
         <TextInput
           style={[styles.input, passwordError && styles.inputError]}
           placeholder="Password"
@@ -214,10 +305,9 @@ export default function AdminScreen() {
           value={passwordInput}
           onChangeText={setPasswordInput}
           secureTextEntry
+          onSubmitEditing={handleLogin}
         />
-        {passwordError && (
-          <Text style={styles.errorText}>Wrong password. Try again.</Text>
-        )}
+        {passwordError && <Text style={styles.errorText}>Wrong password</Text>}
         <TouchableOpacity style={styles.btn} onPress={handleLogin}>
           <Text style={styles.btnText}>Enter</Text>
         </TouchableOpacity>
@@ -226,155 +316,348 @@ export default function AdminScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Admin Panel</Text>
-
-      {/* Add Topic Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add New Topic</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Topic title (e.g. Greetings)"
-          placeholderTextColor="#555"
-          value={topicTitle}
-          onChangeText={setTopicTitle}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Emoji (e.g. 👋)"
-          placeholderTextColor="#555"
-          value={topicEmoji}
-          onChangeText={setTopicEmoji}
-        />
-        <Text style={styles.label}>Pick a color:</Text>
-        <View style={styles.colorRow}>
-          {COLORS.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[styles.colorDot, { backgroundColor: c }, topicColor === c && styles.colorSelected]}
-              onPress={() => setTopicColor(c)}
-            />
-          ))}
-        </View>
-        <TouchableOpacity style={styles.btn} onPress={addTopic} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Topic</Text>}
-        </TouchableOpacity>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Admin</Text>
       </View>
 
-      {/* Topics List with Delete */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Topics</Text>
-        {topics.length === 0 ? (
-          <Text style={styles.emptyText}>No topics yet. Add one above!</Text>
-        ) : (
-          topics.map((t) => (
-            <View key={t.id} style={styles.topicRow}>
-              <View style={[styles.topicColorBar, { backgroundColor: t.color }]} />
-              <Text style={styles.topicRowEmoji}>{t.emoji}</Text>
-              <Text style={styles.topicRowTitle}>{t.title}</Text>
-              <TouchableOpacity onPress={() => deleteTopic(t.id)} style={styles.deleteBtn}>
-                <Text style={styles.deleteBtnText}>🗑️</Text>
+      {/* Tab Bar */}
+      <View style={styles.tabBar}>
+        {(['topics', 'words', 'sentences'] as const).map(t => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
+            onPress={() => setTab(t)}
+          >
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+
+        {/* TOPICS TAB */}
+        {tab === 'topics' && (
+          <View style={styles.section}>
+            {/* Add Topic Form */}
+            <Text style={styles.sectionTitle}>Add Topic</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Title"
+              placeholderTextColor="#555"
+              value={topicTitle}
+              onChangeText={setTopicTitle}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Emoji"
+              placeholderTextColor="#555"
+              value={topicEmoji}
+              onChangeText={setTopicEmoji}
+            />
+            <View style={styles.colorRow}>
+              {COLORS.map(c => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.colorDot, { backgroundColor: c }, topicColor === c && styles.colorSelected]}
+                  onPress={() => setTopicColor(c)}
+                />
+              ))}
+            </View>
+            <TouchableOpacity style={styles.btn} onPress={addTopic} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Topic</Text>}
+            </TouchableOpacity>
+
+            {/* Topics List */}
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Your Topics</Text>
+            {topics.map((t, i) => (
+              <View key={t.id} style={styles.row}>
+                <View style={[styles.rowAccent, { backgroundColor: t.color }]} />
+                <Text style={styles.rowEmoji}>{t.emoji}</Text>
+                <Text style={styles.rowTitle}>{t.title}</Text>
+                <View style={styles.rowActions}>
+                  <TouchableOpacity onPress={() => moveTopic(i, 'up')} style={styles.iconBtn}>
+                    <Text style={styles.iconBtnText}>↑</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => moveTopic(i, 'down')} style={styles.iconBtn}>
+                    <Text style={styles.iconBtnText}>↓</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setEditTopic(t)} style={styles.iconBtn}>
+                    <Text style={styles.iconBtnText}>✏️</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteTopic(t.id)} style={styles.iconBtn}>
+                    <Text style={styles.iconBtnText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* WORDS TAB */}
+        {tab === 'words' && (
+          <View style={styles.section}>
+            {/* Topic Selector */}
+            <Text style={styles.sectionTitle}>Select Topic</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              {topics.map(t => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[styles.chip, selectedTopic?.id === t.id && styles.chipSelected]}
+                  onPress={() => setSelectedTopic(t)}
+                >
+                  <Text style={styles.chipText}>{t.emoji} {t.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Add Word Form */}
+            <Text style={styles.sectionTitle}>Add Word</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Chinese (e.g. 你好)"
+              placeholderTextColor="#555"
+              value={chinese}
+              onChangeText={setChinese}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Pinyin (e.g. nǐ hǎo)"
+              placeholderTextColor="#555"
+              value={pinyin}
+              onChangeText={setPinyin}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="English (e.g. Hello)"
+              placeholderTextColor="#555"
+              value={english}
+              onChangeText={setEnglish}
+            />
+            <TouchableOpacity style={styles.btn} onPress={addWord} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Word</Text>}
+            </TouchableOpacity>
+
+            {/* Words List */}
+            {selectedTopic && (
+              <>
+                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+                  Words in "{selectedTopic.title}" ({words.length})
+                </Text>
+                {words.length === 0 ? (
+                  <Text style={styles.emptyText}>No words yet</Text>
+                ) : (
+                  words.map(w => (
+                    <View key={w.id} style={styles.row}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.rowChinese}>{w.chinese}</Text>
+                        <Text style={styles.rowPinyin}>{w.pinyin} · {w.english}</Text>
+                      </View>
+                      <View style={styles.rowActions}>
+                        <TouchableOpacity onPress={() => setEditWord(w)} style={styles.iconBtn}>
+                          <Text style={styles.iconBtnText}>✏️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => deleteWord(w.id)} style={styles.iconBtn}>
+                          <Text style={styles.iconBtnText}>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </>
+            )}
+          </View>
+        )}
+
+        {/* SENTENCES TAB */}
+        {tab === 'sentences' && (
+          <View style={styles.section}>
+            {/* Topic Selector */}
+            <Text style={styles.sectionTitle}>Select Topic</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              {topics.map(t => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[styles.chip, selectedTopic?.id === t.id && styles.chipSelected]}
+                  onPress={() => setSelectedTopic(t)}
+                >
+                  <Text style={styles.chipText}>{t.emoji} {t.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Add Sentence Form */}
+            <Text style={styles.sectionTitle}>Add Sentence</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Russian sentence"
+              placeholderTextColor="#555"
+              value={russian}
+              onChangeText={setRussian}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Chinese words (space separated, correct order)"
+              placeholderTextColor="#555"
+              value={chineseWords}
+              onChangeText={setChineseWords}
+            />
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#059669' }]} onPress={addSentence} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Sentence</Text>}
+            </TouchableOpacity>
+
+            {/* Sentences List */}
+            {selectedTopic && (
+              <>
+                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+                  Sentences in "{selectedTopic.title}" ({sentences.length})
+                </Text>
+                {sentences.length === 0 ? (
+                  <Text style={styles.emptyText}>No sentences yet</Text>
+                ) : (
+                  sentences.map(s => (
+                    <View key={s.id} style={styles.row}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.rowTitle}>{s.russian}</Text>
+                        <Text style={styles.rowPinyin}>{s.correct_order.join(' ')}</Text>
+                      </View>
+                      <View style={styles.rowActions}>
+                        <TouchableOpacity onPress={() => setEditSentence(s)} style={styles.iconBtn}>
+                          <Text style={styles.iconBtnText}>✏️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => deleteSentence(s.id)} style={styles.iconBtn}>
+                          <Text style={styles.iconBtnText}>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Edit Topic Modal */}
+      <Modal visible={!!editTopic} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Edit Topic</Text>
+            <TextInput
+              style={styles.input}
+              value={editTopic?.title}
+              onChangeText={v => setEditTopic(e => e ? { ...e, title: v } : null)}
+              placeholder="Title"
+              placeholderTextColor="#555"
+            />
+            <TextInput
+              style={styles.input}
+              value={editTopic?.emoji}
+              onChangeText={v => setEditTopic(e => e ? { ...e, emoji: v } : null)}
+              placeholder="Emoji"
+              placeholderTextColor="#555"
+            />
+            <View style={styles.colorRow}>
+              {COLORS.map(c => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.colorDot, { backgroundColor: c }, editTopic?.color === c && styles.colorSelected]}
+                  onPress={() => setEditTopic(e => e ? { ...e, color: c } : null)}
+                />
+              ))}
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditTopic(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.btn} onPress={updateTopic} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
               </TouchableOpacity>
             </View>
-          ))
-        )}
-      </View>
-
-      {/* Add Word Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add New Word</Text>
-        <Text style={styles.label}>Select topic:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.topicScroll}>
-          {topics.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              style={[styles.topicChip, selectedTopic?.id === t.id && styles.topicChipSelected]}
-              onPress={() => setSelectedTopic(t)}
-            >
-              <Text style={styles.topicChipText}>{t.emoji} {t.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <TextInput
-          style={styles.input}
-          placeholder="Chinese (e.g. 你好)"
-          placeholderTextColor="#555"
-          value={chinese}
-          onChangeText={setChinese}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Pinyin (e.g. nǐ hǎo)"
-          placeholderTextColor="#555"
-          value={pinyin}
-          onChangeText={setPinyin}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="English (e.g. Hello)"
-          placeholderTextColor="#555"
-          value={english}
-          onChangeText={setEnglish}
-        />
-        <TouchableOpacity style={styles.btn} onPress={addWord} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Word</Text>}
-        </TouchableOpacity>
-      </View>
-
-      {/* Words List with Delete */}
-      {selectedTopic && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Words in "{selectedTopic.title}"</Text>
-          {words.length === 0 ? (
-            <Text style={styles.emptyText}>No words yet in this topic.</Text>
-          ) : (
-            words.map((w) => (
-              <View key={w.id} style={styles.topicRow}>
-                <Text style={styles.wordChinese}>{w.chinese}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.topicRowTitle}>{w.english}</Text>
-                  <Text style={styles.wordPinyin}>{w.pinyin}</Text>
-                </View>
-                <TouchableOpacity onPress={() => deleteWord(w.id)} style={styles.deleteBtn}>
-                  <Text style={styles.deleteBtnText}>🗑️</Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
+          </View>
         </View>
-      )}
+      </Modal>
 
-      {/* Add Sentence Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add Sentence Builder</Text>
-        <Text style={styles.label}>Select topic first from above ↑</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Russian sentence (e.g. Меня зовут Эмир)"
-          placeholderTextColor="#555"
-          value={russian}
-          onChangeText={setRussian}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Chinese words in order, space separated (e.g. 我 叫 埃米尔)"
-          placeholderTextColor="#555"
-          value={chineseWords}
-          onChangeText={setChineseWords}
-        />
-        <Text style={styles.label}>
-          ⚠️ Type each Chinese word separated by a space. Order matters — type the correct order.
-        </Text>
-        <TouchableOpacity style={[styles.btn, { backgroundColor: '#059669' }]} onPress={addSentence} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Sentence</Text>}
-        </TouchableOpacity>
-      </View>
+      {/* Edit Word Modal */}
+      <Modal visible={!!editWord} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Edit Word</Text>
+            <TextInput
+              style={styles.input}
+              value={editWord?.chinese}
+              onChangeText={v => setEditWord(e => e ? { ...e, chinese: v } : null)}
+              placeholder="Chinese"
+              placeholderTextColor="#555"
+            />
+            <TextInput
+              style={styles.input}
+              value={editWord?.pinyin}
+              onChangeText={v => setEditWord(e => e ? { ...e, pinyin: v } : null)}
+              placeholder="Pinyin"
+              placeholderTextColor="#555"
+            />
+            <TextInput
+              style={styles.input}
+              value={editWord?.english}
+              onChangeText={v => setEditWord(e => e ? { ...e, english: v } : null)}
+              placeholder="English"
+              placeholderTextColor="#555"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditWord(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.btn} onPress={updateWord} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-    </ScrollView>
+      {/* Edit Sentence Modal */}
+      <Modal visible={!!editSentence} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Edit Sentence</Text>
+            <TextInput
+              style={styles.input}
+              value={editSentence?.russian}
+              onChangeText={v => setEditSentence(e => e ? { ...e, russian: v } : null)}
+              placeholder="Russian sentence"
+              placeholderTextColor="#555"
+            />
+            <TextInput
+              style={styles.input}
+              value={editSentence?.correct_order.join(' ')}
+              onChangeText={v => setEditSentence(e => e ? { ...e, correct_order: v.split(' ').filter(w => w.trim() !== '') } : null)}
+              placeholder="Chinese words (space separated)"
+              placeholderTextColor="#555"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditSentence(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, { backgroundColor: '#059669' }]} onPress={updateSentence} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+  },
   authContainer: {
     flex: 1,
     backgroundColor: '#0F0F0F',
@@ -390,12 +673,66 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 24,
   },
-  authSubtitle: {
-    fontSize: 15,
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 8,
+    marginBottom: 16,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+  },
+  tabBtnActive: {
+    backgroundColor: '#4F46E5',
+  },
+  tabText: {
     color: '#888',
-    marginBottom: 32,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+  },
+  scroll: {
+    flex: 1,
+  },
+  section: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#888',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  input: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 10,
+    padding: 14,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   inputError: {
     borderColor: '#FF4444',
@@ -403,57 +740,17 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FF4444',
     fontSize: 13,
-    marginBottom: 12,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 30,
-  },
-  section: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#0F0F0F',
-    borderRadius: 10,
-    padding: 14,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    width: '100%',
+    marginBottom: 10,
   },
   colorRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   colorDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   colorSelected: {
     borderWidth: 3,
@@ -461,58 +758,60 @@ const styles = StyleSheet.create({
   },
   btn: {
     backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
     alignItems: 'center',
-    width: '100%',
   },
   btnText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
-  topicRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 8,
+    gap: 10,
   },
-  topicColorBar: {
-    width: 4,
+  rowAccent: {
+    width: 3,
     height: 24,
     borderRadius: 2,
-    marginRight: 10,
   },
-  topicRowEmoji: {
-    fontSize: 20,
-    marginRight: 10,
+  rowEmoji: {
+    fontSize: 18,
   },
-  topicRowTitle: {
+  rowTitle: {
     flex: 1,
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
   },
-  deleteBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 8,
+  rowChinese: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
-  deleteBtnText: {
+  rowPinyin: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  rowActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  iconBtn: {
+    padding: 6,
+  },
+  iconBtnText: {
     fontSize: 16,
   },
-  emptyText: {
-    color: '#555',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingVertical: 10,
-  },
-  topicScroll: {
-    marginBottom: 16,
-  },
-  topicChip: {
-    backgroundColor: '#0F0F0F',
+  chip: {
+    backgroundColor: '#1A1A1A',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -520,23 +819,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2A2A2A',
   },
-  topicChipSelected: {
+  chipSelected: {
     borderColor: '#4F46E5',
     backgroundColor: '#1a1a3a',
   },
-  topicChipText: {
+  chipText: {
     color: '#FFFFFF',
     fontSize: 14,
   },
-  wordChinese: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    marginRight: 12,
-    fontWeight: '700',
+  emptyText: {
+    color: '#555',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 20,
   },
-  wordPinyin: {
-    color: '#4F46E5',
-    fontSize: 12,
-    marginTop: 2,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modal: {
+    backgroundColor: '#1A1A1A',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  modalCancel: {
+    flex: 1,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#888',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
