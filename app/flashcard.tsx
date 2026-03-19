@@ -2,9 +2,12 @@ import { getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 
 type Word = {
   id: string;
@@ -16,7 +19,9 @@ type Word = {
 export default function FlashcardScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { topicId, topicTitle } = useLocalSearchParams();
+  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
+  const color = (topicColor as string) || '#4F46E5';
+
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
@@ -25,6 +30,7 @@ export default function FlashcardScreen() {
   const [unknown, setUnknown] = useState(0);
   const [finished, setFinished] = useState(false);
   const [deviceId, setDeviceId] = useState('');
+  const [answering, setAnswering] = useState(false);
 
   useEffect(() => {
     setup();
@@ -68,43 +74,50 @@ export default function FlashcardScreen() {
   };
 
   const handleNext = async (didKnow: boolean) => {
+    if (answering) return;
+    setAnswering(true);
     const currentWord = words[index];
     await saveProgress(currentWord.id, didKnow);
     if (didKnow) setKnown(k => k + 1);
     else setUnknown(u => u + 1);
     if (index === words.length - 1) {
       setFinished(true);
-      return;
+    } else {
+      setIndex(i => i + 1);
+      setFlipped(false);
     }
-    setIndex(i => i + 1);
-    setFlipped(false);
+    setAnswering(false);
   };
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#4F46E5" size="large" />
-      </View>
+      <LinearGradient colors={[color, color + '88', '#0D0D0D']} style={styles.center}>
+        <ActivityIndicator color="#FFFFFF" size="large" />
+      </LinearGradient>
     );
   }
 
   if (words.length === 0) {
     return (
-      <View style={styles.center}>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
         <Text style={styles.emptyEmoji}>📭</Text>
         <Text style={styles.emptyText}>{t.noWordsInTopic}</Text>
         <Text style={styles.emptySubtext}>{t.addWordsFromAdmin}</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
   if (finished) {
+    const total = known + unknown;
+    const percentage = total > 0 ? Math.round((known / total) * 100) : 0;
     return (
-      <View style={styles.center}>
-        <Text style={styles.finishedEmoji}>🎉</Text>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+        <Text style={styles.finishedEmoji}>
+          {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
+        </Text>
         <Text style={styles.finishedTitle}>{t.sessionComplete}</Text>
         <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
         <View style={styles.resultsRow}>
@@ -116,52 +129,100 @@ export default function FlashcardScreen() {
             <Text style={styles.resultNumber}>{unknown}</Text>
             <Text style={styles.resultLabel}>{t.review}</Text>
           </View>
+          <View style={styles.resultBox}>
+            <Text style={styles.resultNumber}>{percentage}%</Text>
+            <Text style={styles.resultLabel}>{t.score}</Text>
+          </View>
         </View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.backToTopics}</Text>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: color }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
   const card = words[index];
+  const progress = ((index + 1) / words.length) * 100;
 
   return (
     <View style={styles.container}>
-      <View style={styles.progressRow}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+      {/* Background gradient */}
+      <LinearGradient
+        colors={[color + 'CC', color + '44', '#0D0D0D']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* Giant background character */}
+      <Text style={styles.bgChar}>{card.chinese[0]}</Text>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.topicName}>{topicTitle}</Text>
-        <Text style={styles.progress}>{index + 1}/{words.length}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.topicName}>{topicTitle}</Text>
+          <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
+        </View>
+        <View style={styles.scoreCircle}>
+          <Text style={styles.scoreText}>{known}</Text>
+          <Text style={styles.scoreLabel}>✓</Text>
+        </View>
       </View>
 
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%` }]} />
+      {/* Progress bar */}
+      <View style={styles.progressBarBg}>
+        <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
-      <TouchableOpacity style={styles.card} onPress={() => setFlipped(f => !f)}>
+      {/* Card */}
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => setFlipped(f => !f)}
+        activeOpacity={0.95}
+      >
         <View style={styles.cardInner}>
-          <Text style={styles.chinese}>{card.chinese}</Text>
-          <Text style={styles.pinyin}>{card.pinyin}</Text>
-          {flipped ? (
-            <Text style={styles.english}>{card.english}</Text>
+          {!flipped ? (
+            <>
+              <Text style={styles.cardChinese}>{card.chinese}</Text>
+              <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
+              <View style={styles.tapHint}>
+                <Text style={styles.tapHintText}>{t.tapToReveal}</Text>
+              </View>
+            </>
           ) : (
-            <Text style={styles.hint}>{t.tapToReveal}</Text>
+            <>
+              <Text style={styles.cardChinese}>{card.chinese}</Text>
+              <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
+              <View style={styles.dividerLine} />
+              <Text style={styles.cardEnglish}>{card.english}</Text>
+            </>
           )}
         </View>
       </TouchableOpacity>
 
+      {/* Buttons */}
       {flipped && (
-        <View style={styles.buttons}>
-          <TouchableOpacity style={styles.btnNo} onPress={() => handleNext(false)}>
-            <Text style={styles.btnText}>{t.again}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btnYes} onPress={() => handleNext(true)}>
-            <Text style={styles.btnText}>{t.gotIt}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+  <View style={styles.buttons}>
+    <TouchableOpacity
+      style={styles.btnAgain}
+      onPress={() => handleNext(false)}
+      disabled={answering}
+    >
+      <Text style={styles.btnAgainText}>✕</Text>
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={[styles.btnKnow, { backgroundColor: color }]}
+      onPress={() => handleNext(true)}
+      disabled={answering}
+    >
+      <Text style={styles.btnKnowText}>✓</Text>
+    </TouchableOpacity>
+  </View>
+)}
     </View>
   );
 }
@@ -169,101 +230,167 @@ export default function FlashcardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#0D0D0D',
     paddingHorizontal: 20,
     paddingTop: 60,
   },
   center: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
-  progressRow: {
+  bgChar: {
+    position: 'absolute',
+    fontSize: 320,
+    color: 'rgba(255,255,255,0.04)',
+    fontWeight: '900',
+    top: height * 0.1,
+    alignSelf: 'center',
+    lineHeight: 340,
+  },
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 12,
   },
-  back: {
-    color: '#888',
-    fontSize: 16,
+  backCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backArrow: {
+    color: '#FFFFFF',
+    fontSize: 18,
+  },
+  headerCenter: {
+    flex: 1,
   },
   topicName: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  progress: {
-    color: '#888',
-    fontSize: 16,
+  progressText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 2,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#1A1A1A',
+  scoreCircle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  scoreText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  scoreLabel: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  progressBarBg: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
-    marginBottom: 40,
+    marginBottom: 32,
+    overflow: 'hidden',
   },
-  progressFill: {
-    height: 4,
-    backgroundColor: '#4F46E5',
+  progressBarFill: {
+    height: 3,
     borderRadius: 2,
   },
   card: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 24,
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 300,
-    marginBottom: 40,
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 24,
+    overflow: 'hidden',
   },
   cardInner: {
+    flex: 1,
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
   },
-  chinese: {
-    fontSize: 64,
+  cardChinese: {
+    fontSize: 80,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  cardPinyin: {
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  tapHint: {
+    marginTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  tapHintText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+  },
+  dividerLine: {
+    width: 40,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginVertical: 8,
+  },
+  cardEnglish: {
+    fontSize: 32,
     color: '#FFFFFF',
     fontWeight: '700',
-  },
-  pinyin: {
-    fontSize: 24,
-    color: '#4F46E5',
-  },
-  english: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  hint: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 20,
+    textAlign: 'center',
   },
   buttons: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
+    marginBottom: 40,
   },
-  btnNo: {
+  btnAgain: {
     flex: 1,
-    backgroundColor: '#2A1A1A',
-    padding: 18,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 28,
+    height: 72,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  btnYes: {
+  btnAgainText: {
+    color: '#FF4444',
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  btnKnow: {
     flex: 1,
-    backgroundColor: '#1A2A1A',
-    padding: 18,
-    borderRadius: 16,
+    borderRadius: 28,
+    height: 72,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  btnText: {
+  btnKnowText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '800',
   },
   emptyEmoji: {
     fontSize: 48,
@@ -274,11 +401,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     marginBottom: 30,
+    textAlign: 'center',
   },
   finishedEmoji: {
     fontSize: 64,
@@ -292,33 +421,33 @@ const styles = StyleSheet.create({
   },
   finishedSubtitle: {
     fontSize: 16,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     marginBottom: 30,
   },
   resultsRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     marginBottom: 40,
   },
   resultBox: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
-    minWidth: 120,
+    minWidth: 90,
   },
   resultNumber: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   resultLabel: {
-    fontSize: 14,
-    color: '#888',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -327,5 +456,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

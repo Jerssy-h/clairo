@@ -1,13 +1,17 @@
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const { height } = Dimensions.get('window');
 
 export default function TopicScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const { topicId, topicTitle, topicColor, topicEmoji } = useLocalSearchParams();
+  const color = (topicColor as string) || '#4F46E5';
   const [wordCount, setWordCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -27,26 +31,29 @@ export default function TopicScreen() {
   const activities = [
     {
       id: 'flashcard',
-      emoji: '📚',
       title: t.flashcards,
       description: t.flipToLearn,
       color: '#4F46E5',
+      accentColor: '#6366F1',
+      icon: '卡',
       minWords: 1,
     },
     {
       id: 'quiz',
-      emoji: '🧠',
       title: t.quiz,
       description: t.multipleChoice,
       color: '#7C3AED',
+      accentColor: '#8B5CF6',
+      icon: '测',
       minWords: 4,
     },
     {
       id: 'sentence',
-      emoji: '🧩',
       title: t.sentenceBuilder,
       description: t.arrangeWords,
       color: '#059669',
+      accentColor: '#10B981',
+      icon: '句',
       minWords: 1,
     },
   ];
@@ -57,31 +64,46 @@ export default function TopicScreen() {
       return;
     }
     if (activityId === 'flashcard') {
-      router.push({ pathname: '/flashcard', params: { topicId, topicTitle } });
+      router.push({ pathname: '/flashcard', params: { topicId, topicTitle, topicColor } });
     } else if (activityId === 'quiz') {
-      router.push({ pathname: '/quiz', params: { topicId, topicTitle } });
+      router.push({ pathname: '/quiz', params: { topicId, topicTitle, topicColor } });
     } else if (activityId === 'sentence') {
-      router.push({ pathname: '/sentence', params: { topicId, topicTitle } });
+      router.push({ pathname: '/sentence', params: { topicId, topicTitle, topicColor } });
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Full background gradient */}
+      <LinearGradient
+        colors={[color + 'CC', color + '44', '#0D0D0D', '#0D0D0D']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* Giant background character */}
+      <Text style={styles.bgChar}>{(topicTitle as string)?.[0] || '中'}</Text>
+
+      {/* Back button */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Text style={styles.backText}>{t.back}</Text>
+        <Text style={styles.backArrow}>←</Text>
       </TouchableOpacity>
 
-      <View style={[styles.hero, { borderLeftColor: topicColor as string }]}>
-        <Text style={styles.heroEmoji}>{topicEmoji}</Text>
+      {/* Hero */}
+      <View style={styles.hero}>
         <Text style={styles.heroTitle}>{topicTitle}</Text>
         {loading ? (
-          <ActivityIndicator color="#888" size="small" />
+          <ActivityIndicator color="rgba(255,255,255,0.5)" size="small" />
         ) : (
-          <Text style={styles.heroMeta}>{wordCount} {t.words}</Text>
+          <View style={styles.heroMeta}>
+            <View style={[styles.metaBadge, { backgroundColor: color + '44' }]}>
+              <Text style={styles.metaBadgeText}>{wordCount} {t.words}</Text>
+            </View>
+          </View>
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>{t.chooseActivity}</Text>
+      {/* Activities */}
+      <Text style={styles.sectionLabel}>{t.chooseActivity}</Text>
       <View style={styles.activitiesContainer}>
         {activities.map((activity) => {
           const locked = wordCount < activity.minWords;
@@ -90,19 +112,38 @@ export default function TopicScreen() {
               key={activity.id}
               style={[styles.activityCard, locked && styles.activityLocked]}
               onPress={() => handleActivity(activity.id, activity.minWords)}
+              activeOpacity={0.85}
             >
-              <View style={[styles.activityIcon, { backgroundColor: activity.color + '22' }]}>
-                <Text style={styles.activityEmoji}>{activity.emoji}</Text>
+              {/* Glass effect */}
+              <View style={styles.activityCardInner}>
+                {/* Left icon */}
+                <LinearGradient
+                  colors={[activity.color, activity.accentColor]}
+                  style={styles.activityIconBox}
+                >
+                  <Text style={styles.activityIconText}>{activity.icon}</Text>
+                </LinearGradient>
+
+                {/* Info */}
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityTitle}>{activity.title}</Text>
+                  <Text style={styles.activityDescription}>{activity.description}</Text>
+                </View>
+
+                {/* Right indicator */}
+                {locked ? (
+                  <View style={styles.lockBox}>
+                    <Text style={styles.lockText}>🔒</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.arrowBox, { backgroundColor: activity.color + '33' }]}>
+                    <Text style={[styles.arrowText, { color: activity.accentColor }]}>→</Text>
+                  </View>
+                )}
               </View>
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityTitle}>{activity.title}</Text>
-                <Text style={styles.activityDescription}>{activity.description}</Text>
-              </View>
-              {locked ? (
-                <Text style={styles.lockIcon}>🔒</Text>
-              ) : (
-                <Text style={styles.arrow}>→</Text>
-              )}
+
+              {/* Bottom accent line */}
+              <View style={[styles.activityAccent, { backgroundColor: activity.color }]} />
             </TouchableOpacity>
           );
         })}
@@ -114,67 +155,96 @@ export default function TopicScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#0D0D0D',
     paddingHorizontal: 20,
     paddingTop: 60,
   },
-  backBtn: {
-    marginBottom: 24,
+  bgChar: {
+    position: 'absolute',
+    fontSize: 320,
+    color: 'rgba(255,255,255,0.04)',
+    fontWeight: '900',
+    top: height * 0.05,
+    alignSelf: 'center',
+    lineHeight: 340,
   },
-  backText: {
-    color: '#888',
-    fontSize: 16,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  backArrow: {
+    color: '#FFFFFF',
+    fontSize: 18,
   },
   hero: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 20,
-    padding: 28,
-    marginBottom: 32,
-    borderLeftWidth: 4,
-  },
-  heroEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
+    marginBottom: 40,
   },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 6,
+    letterSpacing: -1,
+    marginBottom: 12,
   },
   heroMeta: {
-    fontSize: 15,
-    color: '#888',
+    flexDirection: 'row',
+    gap: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
+  metaBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  metaBadgeText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 14,
   },
   activitiesContainer: {
     gap: 12,
   },
   activityCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  activityCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    padding: 16,
+    gap: 14,
   },
   activityLocked: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
-  activityIcon: {
+  activityIconBox: {
     width: 52,
     height: 52,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activityEmoji: {
-    fontSize: 26,
+  activityIconText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   activityInfo: {
     flex: 1,
@@ -187,13 +257,33 @@ const styles = StyleSheet.create({
   },
   activityDescription: {
     fontSize: 13,
-    color: '#888',
+    color: 'rgba(255,255,255,0.4)',
+    lineHeight: 18,
   },
-  lockIcon: {
-    fontSize: 18,
+  lockBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  arrow: {
+  lockText: {
+    fontSize: 16,
+  },
+  arrowBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowText: {
     fontSize: 18,
-    color: '#888',
+    fontWeight: '700',
+  },
+  activityAccent: {
+    height: 2,
+    opacity: 0.6,
   },
 });
