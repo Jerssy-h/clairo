@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 type Word = {
   id: string;
@@ -100,11 +100,13 @@ export default function FlashcardScreen() {
   if (words.length === 0) {
     return (
       <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
-        <Text style={styles.emptyEmoji}>📭</Text>
-        <Text style={styles.emptyText}>{t.noWordsInTopic}</Text>
-        <Text style={styles.emptySubtext}>{t.addWordsFromAdmin}</Text>
+        <Text style={styles.decorChar}>学</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>{t.noWordsInTopic}</Text>
+          <Text style={styles.emptySubtext}>{t.addWordsFromAdmin}</Text>
+        </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.goBack}</Text>
+          <Text style={styles.backBtnText}>← {t.goBack}</Text>
         </TouchableOpacity>
       </LinearGradient>
     );
@@ -149,16 +151,12 @@ export default function FlashcardScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background gradient */}
       <LinearGradient
         colors={[color + 'CC', color + '44', '#0D0D0D']}
         style={StyleSheet.absoluteFillObject}
       />
-
-      {/* Giant background character */}
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Text style={styles.backArrow}>←</Text>
@@ -173,12 +171,10 @@ export default function FlashcardScreen() {
         </View>
       </View>
 
-      {/* Progress bar */}
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
-      {/* Card */}
       <TouchableOpacity
         style={styles.card}
         onPress={() => setFlipped(f => !f)}
@@ -204,25 +200,24 @@ export default function FlashcardScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Buttons */}
       {flipped && (
-  <View style={styles.buttons}>
-    <TouchableOpacity
-      style={styles.btnAgain}
-      onPress={() => handleNext(false)}
-      disabled={answering}
-    >
-      <Text style={styles.btnAgainText}>✕</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={[styles.btnKnow, { backgroundColor: color }]}
-      onPress={() => handleNext(true)}
-      disabled={answering}
-    >
-      <Text style={styles.btnKnowText}>✓</Text>
-    </TouchableOpacity>
-  </View>
-)}
+        <View style={styles.buttons}>
+          <TouchableOpacity
+            style={styles.btnAgain}
+            onPress={() => handleNext(false)}
+            disabled={answering}
+          >
+            <Text style={styles.btnAgainText}>✕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.btnKnow, { backgroundColor: color }]}
+            onPress={() => handleNext(true)}
+            disabled={answering}
+          >
+            <Text style={styles.btnKnowText}>✓</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -392,13 +387,25 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+  decorChar: {
+    fontSize: 120,
+    color: 'rgba(255,255,255,0.15)',
+    fontWeight: '900',
+    marginBottom: 24,
   },
-  emptyText: {
+  emptyCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 24,
+    width: '100%',
+  },
+  emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
@@ -406,7 +413,6 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
-    marginBottom: 30,
     textAlign: 'center',
   },
   finishedEmoji: {
@@ -447,10 +453,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 20,
+    paddingHorizontal: 32,
     paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   backBtnText: {
     color: '#FFFFFF',

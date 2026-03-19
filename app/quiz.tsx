@@ -111,11 +111,13 @@ export default function QuizScreen() {
   if (words.length < 4) {
     return (
       <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
-        <Text style={styles.emptyEmoji}>⚠️</Text>
-        <Text style={styles.emptyText}>{t.need4Words}</Text>
-        <Text style={styles.emptySubtext}>{t.add4Words}</Text>
+        <Text style={styles.decorChar}>问</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>{t.need4Words}</Text>
+          <Text style={styles.emptySubtext}>{t.add4Words}</Text>
+        </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.goBack}</Text>
+          <Text style={styles.backBtnText}>← {t.goBack}</Text>
         </TouchableOpacity>
       </LinearGradient>
     );
@@ -160,16 +162,12 @@ export default function QuizScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background gradient */}
       <LinearGradient
         colors={[color + 'CC', color + '44', '#0D0D0D']}
         style={StyleSheet.absoluteFillObject}
       />
-
-      {/* Giant background character */}
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Text style={styles.backArrow}>←</Text>
@@ -185,12 +183,10 @@ export default function QuizScreen() {
         )}
       </View>
 
-      {/* Progress bar */}
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
-      {/* Score row */}
       <View style={styles.scoreRow}>
         <View style={styles.scorePill}>
           <Text style={styles.scoreCorrect}>✓ {correct}</Text>
@@ -200,14 +196,12 @@ export default function QuizScreen() {
         </View>
       </View>
 
-      {/* Question card */}
       <View style={styles.card}>
         <Text style={styles.questionLabel}>What does this mean?</Text>
         <Text style={styles.cardChinese}>{card.chinese}</Text>
         <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
       </View>
 
-      {/* Options */}
       <View style={styles.optionsContainer}>
         {options.map((option) => (
           <TouchableOpacity
@@ -375,13 +369,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+  decorChar: {
+    fontSize: 120,
+    color: 'rgba(255,255,255,0.15)',
+    fontWeight: '900',
+    marginBottom: 24,
   },
-  emptyText: {
+  emptyCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 24,
+    width: '100%',
+  },
+  emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
@@ -390,7 +396,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
-    marginBottom: 30,
   },
   finishedEmoji: {
     fontSize: 64,
@@ -430,10 +435,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 20,
+    paddingHorizontal: 32,
     paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   backBtnText: {
     color: '#FFFFFF',

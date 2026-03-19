@@ -105,8 +105,11 @@ export default function SentenceScreen() {
   if (sentences.length === 0) {
     return (
       <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
-        <Text style={styles.emptyText}>{t.noSentencesYet}</Text>
-        <Text style={styles.emptySubtext}>{t.addSentencesFromAdmin}</Text>
+        <Text style={styles.decorChar}>文</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>{t.noSentencesYet}</Text>
+          <Text style={styles.emptySubtext}>{t.addSentencesFromAdmin}</Text>
+        </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
@@ -152,16 +155,12 @@ export default function SentenceScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background gradient */}
       <LinearGradient
         colors={[color + 'CC', color + '44', '#0D0D0D']}
         style={StyleSheet.absoluteFillObject}
       />
-
-      {/* Giant background character */}
       <Text style={styles.bgChar}>文</Text>
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Text style={styles.backArrow}>←</Text>
@@ -175,18 +174,15 @@ export default function SentenceScreen() {
         </View>
       </View>
 
-      {/* Progress bar */}
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
-      {/* Russian sentence */}
       <View style={styles.russianCard}>
         <Text style={styles.russianLabel}>{t.translateSentence}</Text>
         <Text style={styles.russianText}>{sentence.russian}</Text>
       </View>
 
-      {/* Answer area */}
       <View style={styles.answerArea}>
         <Text style={styles.areaLabel}>{t.yourAnswer}</Text>
         <View style={[
@@ -215,7 +211,6 @@ export default function SentenceScreen() {
         )}
       </View>
 
-      {/* Available words */}
       <View style={styles.availableArea}>
         <Text style={styles.areaLabel}>{t.availableWords}</Text>
         <View style={styles.wordsRow}>
@@ -231,7 +226,6 @@ export default function SentenceScreen() {
         </View>
       </View>
 
-      {/* Button */}
       {result === 'correct' ? (
         <TouchableOpacity
           style={[styles.checkBtn, { backgroundColor: color }]}
@@ -246,7 +240,7 @@ export default function SentenceScreen() {
           style={[
             styles.checkBtn,
             { backgroundColor: color },
-            selected.length === 0 && styles.checkBtnDisabled
+            selected.length === 0 && styles.checkBtnDisabled,
           ]}
           onPress={handleCheck}
           disabled={selected.length === 0}
@@ -436,9 +430,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  emptyText: {
+  decorChar: {
+    fontSize: 120,
+    color: 'rgba(255,255,255,0.15)',
+    fontWeight: '900',
+    marginBottom: 24,
+  },
+  emptyCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 24,
+    width: '100%',
+  },
+  emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
@@ -447,7 +457,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
-    marginBottom: 30,
   },
   finishedEmoji: {
     fontSize: 64,
@@ -487,10 +496,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 20,
+    paddingHorizontal: 32,
     paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   backBtnText: {
     color: '#FFFFFF',
