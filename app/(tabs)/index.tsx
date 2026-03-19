@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -10,6 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48) / 2;
 
 type Topic = {
   id: string;
@@ -43,58 +47,91 @@ export default function HomeScreen() {
   const totalKnown = topics.reduce((sum, t) => sum + t.known_count, 0);
   const overallProgress = totalWords > 0 ? Math.round((totalKnown / totalWords) * 100) : 0;
 
+  const recentTopic = topics.find(t => t.known_count > 0) || topics[0];
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>你好 👋</Text>
-            <Text style={styles.appName}>Clairo</Text>
-          </View>
+          <Text style={styles.greeting}>Good morning</Text>
+          <Text style={styles.appName}>Clairo</Text>
         </View>
 
-        {/* Overall Progress Card */}
-        {topics.length > 0 && (
-          <View style={styles.progressCard}>
-            <View style={styles.progressCardTop}>
-              <View>
-                <Text style={styles.progressCardTitle}>Overall Progress</Text>
-                <Text style={styles.progressCardSub}>{totalKnown} of {totalWords} words learned</Text>
+        {/* Continue Card */}
+        {recentTopic && (
+          <TouchableOpacity
+            style={[styles.continueCard, { backgroundColor: recentTopic.color }]}
+            onPress={() => router.push({
+              pathname: '/topic',
+              params: {
+                topicId: recentTopic.id,
+                topicTitle: recentTopic.title,
+                topicColor: recentTopic.color,
+                topicEmoji: recentTopic.emoji,
+              }
+            })}
+            activeOpacity={0.85}
+          >
+            <View style={styles.continueCardOverlay}>
+              <Text style={styles.continueLabel}>CONTINUE LEARNING</Text>
+              <Text style={styles.continueEmoji}>{recentTopic.emoji}</Text>
+              <Text style={styles.continueTitle}>{recentTopic.title}</Text>
+              <Text style={styles.continueMeta}>{recentTopic.known_count}/{recentTopic.word_count} words known</Text>
+              <View style={styles.continueProgressBar}>
+                <View style={[styles.continueProgressFill, {
+                  width: recentTopic.word_count > 0
+                    ? `${Math.round((recentTopic.known_count / recentTopic.word_count) * 100)}%`
+                    : '0%'
+                }]} />
               </View>
-              <Text style={styles.progressPercent}>{overallProgress}%</Text>
             </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${overallProgress}%` }]} />
+          </TouchableOpacity>
+        )}
+
+        {/* Stats Row */}
+        {topics.length > 0 && (
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{totalKnown}</Text>
+              <Text style={styles.statLabel}>Words Learned</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{overallProgress}%</Text>
+              <Text style={styles.statLabel}>Overall Progress</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{topics.length}</Text>
+              <Text style={styles.statLabel}>Topics</Text>
             </View>
           </View>
         )}
 
-        {/* Topics */}
-        <Text style={styles.sectionLabel}>TOPICS</Text>
-        <View style={styles.topicsContainer}>
-          {loading ? (
-            <ActivityIndicator color="#0A84FF" size="large" style={{ marginTop: 40 }} />
-          ) : topics.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📭</Text>
-              <Text style={styles.emptyText}>No topics yet</Text>
-              <Text style={styles.emptySubtext}>Add your first topic from the Admin panel</Text>
-            </View>
-          ) : (
-            topics.map((topic, i) => {
+        {/* Topics Grid */}
+        <Text style={styles.sectionTitle}>All Topics</Text>
+
+        {loading ? (
+          <ActivityIndicator color="#1DB954" size="large" style={{ marginTop: 40 }} />
+        ) : topics.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📭</Text>
+            <Text style={styles.emptyText}>No topics yet</Text>
+            <Text style={styles.emptySubtext}>Add your first topic from the Admin panel</Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {topics.map((topic) => {
               const progress = topic.word_count > 0
                 ? Math.round((topic.known_count / topic.word_count) * 100)
                 : 0;
               return (
                 <TouchableOpacity
                   key={topic.id}
-                  style={[
-                    styles.topicCard,
-                    i === topics.length - 1 && styles.topicCardLast
-                  ]}
+                  style={[styles.gridCard, { backgroundColor: topic.color + '33' }]}
                   onPress={() => router.push({
                     pathname: '/topic',
                     params: {
@@ -104,36 +141,24 @@ export default function HomeScreen() {
                       topicEmoji: topic.emoji,
                     }
                   })}
-                  activeOpacity={0.6}
+                  activeOpacity={0.75}
                 >
-                  {/* Left emoji bubble */}
-                  <View style={[styles.emojiBox, { backgroundColor: topic.color + '22' }]}>
-                    <Text style={styles.topicEmoji}>{topic.emoji}</Text>
+                  <View style={[styles.gridCardAccent, { backgroundColor: topic.color }]} />
+                  <Text style={styles.gridEmoji}>{topic.emoji}</Text>
+                  <Text style={styles.gridTitle}>{topic.title}</Text>
+                  <Text style={styles.gridMeta}>{topic.word_count} words</Text>
+                  <View style={styles.gridProgressBar}>
+                    <View style={[styles.gridProgressFill, {
+                      width: `${progress}%`,
+                      backgroundColor: topic.color,
+                    }]} />
                   </View>
-
-                  {/* Info */}
-                  <View style={styles.topicInfo}>
-                    <Text style={styles.topicTitle}>{topic.title}</Text>
-                    <View style={styles.miniProgressBar}>
-                      <View style={[styles.miniProgressFill, {
-                        width: `${progress}%`,
-                        backgroundColor: topic.color,
-                      }]} />
-                    </View>
-                    <Text style={styles.topicMeta}>{topic.known_count}/{topic.word_count} words</Text>
-                  </View>
-
-                  {/* Progress % + chevron */}
-                  <View style={styles.topicRight}>
-                    <Text style={[styles.topicPercent, { color: topic.color }]}>{progress}%</Text>
-                    <Text style={styles.chevron}>›</Text>
-                  </View>
+                  <Text style={[styles.gridPercent, { color: topic.color }]}>{progress}%</Text>
                 </TouchableOpacity>
               );
-            })
-          )}
-        </View>
-
+            })}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -142,7 +167,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#121212',
   },
   scroll: {
     paddingTop: 60,
@@ -151,129 +176,150 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
   },
   greeting: {
-    fontSize: 15,
-    color: '#888',
+    fontSize: 14,
+    color: '#B3B3B3',
     marginBottom: 4,
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
   appName: {
-    fontSize: 34,
-    fontWeight: '700',
+    fontSize: 36,
+    fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
-  progressCard: {
+  continueCard: {
     marginHorizontal: 20,
-    backgroundColor: '#1C1C1E',
     borderRadius: 16,
-    padding: 18,
-    marginBottom: 32,
+    marginBottom: 20,
+    overflow: 'hidden',
+    height: 180,
   },
-  progressCardTop: {
+  continueCardOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    padding: 20,
+    justifyContent: 'flex-end',
+  },
+  continueLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    position: 'absolute',
+    top: 20,
+    left: 20,
+  },
+  continueEmoji: {
+    fontSize: 32,
+    marginBottom: 6,
+  },
+  continueTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  continueMeta: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 10,
+  },
+  continueProgressBar: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 2,
+  },
+  continueProgressFill: {
+    height: 3,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+  },
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 28,
   },
-  progressCardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+  statCard: {
+    flex: 1,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 22,
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 2,
   },
-  progressCardSub: {
-    fontSize: 13,
-    color: '#888',
+  statLabel: {
+    fontSize: 11,
+    color: '#B3B3B3',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  progressPercent: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#0A84FF',
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 3,
-  },
-  progressBarFill: {
-    height: 6,
-    backgroundColor: '#0A84FF',
-    borderRadius: 3,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#888',
-    letterSpacing: 0.5,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
     paddingHorizontal: 20,
-    marginBottom: 8,
+    marginBottom: 14,
   },
-  topicsContainer: {
-    marginHorizontal: 20,
-    backgroundColor: '#1C1C1E',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  topicCard: {
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2C2C2E',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
     gap: 12,
   },
-  topicCardLast: {
-    borderBottomWidth: 0,
+  gridCard: {
+    width: CARD_WIDTH,
+    borderRadius: 12,
+    padding: 16,
+    overflow: 'hidden',
   },
-  emojiBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  gridCardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
-  topicEmoji: {
-    fontSize: 22,
+  gridEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+    marginTop: 8,
   },
-  topicInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  topicTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+  gridTitle: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
+    marginBottom: 4,
   },
-  miniProgressBar: {
-    height: 3,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 2,
-  },
-  miniProgressFill: {
-    height: 3,
-    borderRadius: 2,
-  },
-  topicMeta: {
+  gridMeta: {
     fontSize: 12,
-    color: '#888',
+    color: '#B3B3B3',
+    marginBottom: 10,
   },
-  topicRight: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
+  gridProgressBar: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 2,
+    marginBottom: 6,
   },
-  topicPercent: {
-    fontSize: 13,
-    fontWeight: '600',
+  gridProgressFill: {
+    height: 3,
+    borderRadius: 2,
   },
-  chevron: {
-    fontSize: 20,
-    color: '#3A3A3C',
-    fontWeight: '300',
+  gridPercent: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   emptyState: {
     alignItems: 'center',
@@ -292,7 +338,7 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: '#B3B3B3',
     textAlign: 'center',
   },
 });
