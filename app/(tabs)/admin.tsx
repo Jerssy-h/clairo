@@ -38,7 +38,7 @@ type Sentence = {
 };
 
 const COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2'];
-const ADMIN_PASSWORD = 'clairo2024';
+const ADMIN_PASSWORD = 'clairo2006';
 
 export default function AdminScreen() {
   const [authenticated, setAuthenticated] = useState(false);
