@@ -1,3 +1,4 @@
+import { getCache, setCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -35,11 +36,19 @@ export default function QuizScreen() {
   }, [words, index]);
 
   const fetchWords = async () => {
+    const cacheKey = `words_${topicId}`;
+    const cached = getCache<Word[]>(cacheKey);
+    if (cached) {
+      setWords(shuffle(cached));
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from('words')
       .select('*')
       .eq('topic_id', topicId);
     setWords(shuffle(data || []));
+    setCache(cacheKey, data || []);
     setLoading(false);
   };
 

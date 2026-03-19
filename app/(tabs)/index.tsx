@@ -1,5 +1,6 @@
 import Logo from '@/components/Logo';
 import { isAdmin } from '@/lib/auth';
+import { getCache, setCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -50,11 +51,22 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const fetchTopics = async () => {
+  const fetchTopics = async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = getCache<Topic[]>('topics');
+      if (cached) {
+        setTopics(cached);
+        setLoading(false);
+        return;
+      }
+    }
     setLoading(true);
     const { data, error } = await supabase.from('topics_with_count').select('*');
     if (error) console.error(error);
-    else setTopics(data || []);
+    else {
+      setTopics(data || []);
+      setCache('topics', data || []);
+    }
     setLoading(false);
   };
 

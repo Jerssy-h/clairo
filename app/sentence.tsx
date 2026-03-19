@@ -1,3 +1,4 @@
+import { getCache, setCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -35,11 +36,19 @@ export default function SentenceScreen() {
   }, [sentences, index]);
 
   const fetchSentences = async () => {
+    const cacheKey = `sentences_${topicId}`;
+    const cached = getCache<Sentence[]>(cacheKey);
+    if (cached) {
+      setSentences(cached);
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from('sentences')
       .select('*')
       .eq('topic_id', topicId);
     setSentences(data || []);
+    setCache(cacheKey, data || []);
     setLoading(false);
   };
 

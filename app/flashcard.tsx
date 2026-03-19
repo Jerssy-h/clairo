@@ -1,3 +1,4 @@
+import { getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,23 +35,37 @@ export default function FlashcardScreen() {
   };
 
   const fetchWords = async () => {
+    const cacheKey = `words_${topicId}`;
+    const cached = getCache<Word[]>(cacheKey);
+    if (cached) {
+      setWords(cached);
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from('words')
       .select('*')
       .eq('topic_id', topicId);
     if (error) console.error(error);
-    else setWords(data || []);
+    else {
+      setWords(data || []);
+      setCache(cacheKey, data || []);
+    }
     setLoading(false);
   };
 
   const saveProgress = async (wordId: string, isKnown: boolean) => {
-    if (!deviceId) return;
-    await supabase.from('progress').upsert({
+    if (!deviceId) {
+      console.log('NO DEVICE ID - skipping save');
+      return;
+    }
+    const { error } = await supabase.from('progress').upsert({
       device_id: deviceId,
       word_id: wordId,
       known: isKnown,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'device_id,word_id' });
+    if (error) console.error(error.message);
   };
 
   const handleNext = async (didKnow: boolean) => {

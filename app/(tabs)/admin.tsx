@@ -1,3 +1,4 @@
+import { clearCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import {
@@ -44,31 +45,25 @@ export default function AdminScreen() {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
 
-  // Data
   const [topics, setTopics] = useState<Topic[]>([]);
   const [words, setWords] = useState<Word[]>([]);
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Active tab
   const [tab, setTab] = useState<'topics' | 'words' | 'sentences'>('topics');
 
-  // Topic form
   const [topicTitle, setTopicTitle] = useState('');
   const [topicEmoji, setTopicEmoji] = useState('');
   const [topicColor, setTopicColor] = useState(COLORS[0]);
 
-  // Word form
   const [chinese, setChinese] = useState('');
   const [pinyin, setPinyin] = useState('');
   const [english, setEnglish] = useState('');
 
-  // Sentence form
   const [russian, setRussian] = useState('');
   const [chineseWords, setChineseWords] = useState('');
 
-  // Edit modals
   const [editTopic, setEditTopic] = useState<Topic | null>(null);
   const [editWord, setEditWord] = useState<Word | null>(null);
   const [editSentence, setEditSentence] = useState<Sentence | null>(null);
@@ -136,6 +131,7 @@ export default function AdminScreen() {
     else {
       setTopicTitle('');
       setTopicEmoji('');
+      clearCache('topics');
       fetchTopics();
     }
     setLoading(false);
@@ -152,6 +148,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setEditTopic(null);
+      clearCache('topics');
       fetchTopics();
     }
     setLoading(false);
@@ -169,6 +166,9 @@ export default function AdminScreen() {
             setWords([]);
             setSentences([]);
           }
+          clearCache('topics');
+          clearCache(`words_${id}`);
+          clearCache(`sentences_${id}`);
           fetchTopics();
         },
       },
@@ -181,6 +181,7 @@ export default function AdminScreen() {
     if (swapIndex < 0 || swapIndex >= newTopics.length) return;
     [newTopics[index], newTopics[swapIndex]] = [newTopics[swapIndex], newTopics[index]];
     setTopics(newTopics);
+    clearCache('topics');
     await Promise.all(newTopics.map((t, i) =>
       supabase.from('topics').update({ sort_order: i }).eq('id', t.id)
     ));
@@ -201,6 +202,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setChinese(''); setPinyin(''); setEnglish('');
+      clearCache(`words_${selectedTopic.id}`);
       fetchWords();
     }
     setLoading(false);
@@ -217,6 +219,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setEditWord(null);
+      clearCache(`words_${editWord.topic_id}`);
       fetchWords();
     }
     setLoading(false);
@@ -229,6 +232,7 @@ export default function AdminScreen() {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           await supabase.from('words').delete().eq('id', id);
+          if (selectedTopic) clearCache(`words_${selectedTopic.id}`);
           fetchWords();
         },
       },
@@ -257,6 +261,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setRussian(''); setChineseWords('');
+      clearCache(`sentences_${selectedTopic.id}`);
       fetchSentences();
     }
     setLoading(false);
@@ -274,6 +279,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setEditSentence(null);
+      clearCache(`sentences_${editSentence.topic_id}`);
       fetchSentences();
     }
     setLoading(false);
@@ -286,13 +292,13 @@ export default function AdminScreen() {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           await supabase.from('sentences').delete().eq('id', id);
+          if (selectedTopic) clearCache(`sentences_${selectedTopic.id}`);
           fetchSentences();
         },
       },
     ]);
   };
 
-  // AUTH SCREEN
   if (!authenticated) {
     return (
       <View style={styles.authContainer}>
@@ -317,12 +323,10 @@ export default function AdminScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Admin</Text>
       </View>
 
-      {/* Tab Bar */}
       <View style={styles.tabBar}>
         {(['topics', 'words', 'sentences'] as const).map(t => (
           <TouchableOpacity
@@ -342,7 +346,6 @@ export default function AdminScreen() {
         {/* TOPICS TAB */}
         {tab === 'topics' && (
           <View style={styles.section}>
-            {/* Add Topic Form */}
             <Text style={styles.sectionTitle}>Add Topic</Text>
             <TextInput
               style={styles.input}
@@ -371,7 +374,6 @@ export default function AdminScreen() {
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Topic</Text>}
             </TouchableOpacity>
 
-            {/* Topics List */}
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Your Topics</Text>
             {topics.map((t, i) => (
               <View key={t.id} style={styles.row}>
@@ -400,7 +402,6 @@ export default function AdminScreen() {
         {/* WORDS TAB */}
         {tab === 'words' && (
           <View style={styles.section}>
-            {/* Topic Selector */}
             <Text style={styles.sectionTitle}>Select Topic</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
               {topics.map(t => (
@@ -414,7 +415,6 @@ export default function AdminScreen() {
               ))}
             </ScrollView>
 
-            {/* Add Word Form */}
             <Text style={styles.sectionTitle}>Add Word</Text>
             <TextInput
               style={styles.input}
@@ -441,7 +441,6 @@ export default function AdminScreen() {
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Word</Text>}
             </TouchableOpacity>
 
-            {/* Words List */}
             {selectedTopic && (
               <>
                 <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
@@ -475,7 +474,6 @@ export default function AdminScreen() {
         {/* SENTENCES TAB */}
         {tab === 'sentences' && (
           <View style={styles.section}>
-            {/* Topic Selector */}
             <Text style={styles.sectionTitle}>Select Topic</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
               {topics.map(t => (
@@ -489,7 +487,6 @@ export default function AdminScreen() {
               ))}
             </ScrollView>
 
-            {/* Add Sentence Form */}
             <Text style={styles.sectionTitle}>Add Sentence</Text>
             <TextInput
               style={styles.input}
@@ -509,7 +506,6 @@ export default function AdminScreen() {
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Sentence</Text>}
             </TouchableOpacity>
 
-            {/* Sentences List */}
             {selectedTopic && (
               <>
                 <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
