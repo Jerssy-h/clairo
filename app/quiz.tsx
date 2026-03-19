@@ -1,9 +1,12 @@
 import { getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const { height } = Dimensions.get('window');
 
 type Word = {
   id: string;
@@ -19,7 +22,9 @@ function shuffle<T>(array: T[]): T[] {
 export default function QuizScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { topicId, topicTitle } = useLocalSearchParams();
+  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
+  const color = (topicColor as string) || '#7C3AED';
+
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
@@ -28,6 +33,7 @@ export default function QuizScreen() {
   const [correct, setCorrect] = useState(0);
   const [wrong, setWrong] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [combo, setCombo] = useState(0);
 
   useEffect(() => {
     fetchWords();
@@ -67,12 +73,17 @@ export default function QuizScreen() {
     if (selected) return;
     setSelected(answer);
     const isCorrect = answer === words[index].english;
-    if (isCorrect) setCorrect(c => c + 1);
-    else setWrong(w => w + 1);
+    if (isCorrect) {
+      setCorrect(c => c + 1);
+      setCombo(c => c + 1);
+    } else {
+      setWrong(w => w + 1);
+      setCombo(0);
+    }
     setTimeout(() => {
       if (index === words.length - 1) setFinished(true);
       else setIndex(i => i + 1);
-    }, 1000);
+    }, 900);
   };
 
   const getOptionStyle = (option: string) => {
@@ -84,29 +95,29 @@ export default function QuizScreen() {
 
   const getOptionTextStyle = (option: string) => {
     if (!selected) return styles.optionText;
-    if (option === words[index].english) return [styles.optionText, styles.optionTextCorrect];
-    if (option === selected) return [styles.optionText, styles.optionTextWrong];
-    return [styles.optionText, styles.optionTextDim];
+    if (option === words[index].english) return [styles.optionText, { color: '#4CAF50' }];
+    if (option === selected) return [styles.optionText, { color: '#FF4444' }];
+    return [styles.optionText, { opacity: 0.4 }];
   };
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#4F46E5" size="large" />
-      </View>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+        <ActivityIndicator color="#FFFFFF" size="large" />
+      </LinearGradient>
     );
   }
 
   if (words.length < 4) {
     return (
-      <View style={styles.center}>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
         <Text style={styles.emptyEmoji}>⚠️</Text>
         <Text style={styles.emptyText}>{t.need4Words}</Text>
         <Text style={styles.emptySubtext}>{t.add4Words}</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -114,7 +125,7 @@ export default function QuizScreen() {
     const total = correct + wrong;
     const percentage = Math.round((correct / total) * 100);
     return (
-      <View style={styles.center}>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
@@ -134,46 +145,76 @@ export default function QuizScreen() {
             <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.backToTopics}</Text>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: color }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
   const card = words[index];
+  const progress = ((index + 1) / words.length) * 100;
 
   return (
     <View style={styles.container}>
-      <View style={styles.progressRow}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+      {/* Background gradient */}
+      <LinearGradient
+        colors={[color + 'CC', color + '44', '#0D0D0D']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* Giant background character */}
+      <Text style={styles.bgChar}>{card.chinese[0]}</Text>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.topicName}>{topicTitle}</Text>
-        <Text style={styles.progress}>{index + 1}/{words.length}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.topicName}>{topicTitle}</Text>
+          <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
+        </View>
+        {combo >= 2 && (
+          <View style={styles.comboBadge}>
+            <Text style={styles.comboText}>🔥 {combo}x</Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%` }]} />
+      {/* Progress bar */}
+      <View style={styles.progressBarBg}>
+        <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
+      {/* Score row */}
       <View style={styles.scoreRow}>
-        <Text style={styles.scoreCorrect}>✅ {correct}</Text>
-        <Text style={styles.scoreWrong}>❌ {wrong}</Text>
+        <View style={styles.scorePill}>
+          <Text style={styles.scoreCorrect}>✓ {correct}</Text>
+        </View>
+        <View style={styles.scorePill}>
+          <Text style={styles.scoreWrong}>✕ {wrong}</Text>
+        </View>
       </View>
 
+      {/* Question card */}
       <View style={styles.card}>
         <Text style={styles.questionLabel}>What does this mean?</Text>
-        <Text style={styles.chinese}>{card.chinese}</Text>
-        <Text style={styles.pinyin}>{card.pinyin}</Text>
+        <Text style={styles.cardChinese}>{card.chinese}</Text>
+        <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
       </View>
 
+      {/* Options */}
       <View style={styles.optionsContainer}>
         {options.map((option) => (
           <TouchableOpacity
             key={option}
             style={getOptionStyle(option)}
             onPress={() => handleAnswer(option)}
+            activeOpacity={0.85}
           >
             <Text style={getOptionTextStyle(option)}>{option}</Text>
           </TouchableOpacity>
@@ -186,102 +227,144 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#0D0D0D',
     paddingHorizontal: 20,
     paddingTop: 60,
   },
   center: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
-  progressRow: {
+  bgChar: {
+    position: 'absolute',
+    fontSize: 320,
+    color: 'rgba(255,255,255,0.04)',
+    fontWeight: '900',
+    top: height * 0.05,
+    alignSelf: 'center',
+    lineHeight: 340,
+  },
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 12,
   },
-  back: {
-    color: '#888',
-    fontSize: 16,
+  backCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backArrow: {
+    color: '#FFFFFF',
+    fontSize: 18,
+  },
+  headerCenter: {
+    flex: 1,
   },
   topicName: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  progress: {
-    color: '#888',
-    fontSize: 16,
+  progressText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 2,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#1A1A1A',
+  comboBadge: {
+    backgroundColor: 'rgba(255,160,0,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,160,0,0.3)',
+  },
+  comboText: {
+    color: '#FFA000',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  progressBarBg: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
-    marginBottom: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
   },
-  progressFill: {
-    height: 4,
-    backgroundColor: '#4F46E5',
+  progressBarFill: {
+    height: 3,
     borderRadius: 2,
   },
   scoreRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-    marginBottom: 24,
+    gap: 8,
+    marginBottom: 16,
+  },
+  scorePill: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   scoreCorrect: {
     color: '#4CAF50',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   scoreWrong: {
     color: '#FF4444',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   card: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 24,
-    padding: 40,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    padding: 32,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   questionLabel: {
-    color: '#888',
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
     marginBottom: 16,
+    letterSpacing: 0.5,
   },
-  chinese: {
-    fontSize: 64,
+  cardChinese: {
+    fontSize: 72,
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 8,
+    textAlign: 'center',
   },
-  pinyin: {
+  cardPinyin: {
     fontSize: 22,
-    color: '#4F46E5',
+    fontWeight: '600',
   },
   optionsContainer: {
-    gap: 12,
+    gap: 10,
   },
   optionBtn: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 14,
-    padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   optionCorrect: {
-    backgroundColor: '#1A2A1A',
+    backgroundColor: 'rgba(76,175,80,0.15)',
     borderColor: '#4CAF50',
   },
   optionWrong: {
-    backgroundColor: '#2A1A1A',
+    backgroundColor: 'rgba(255,68,68,0.15)',
     borderColor: '#FF4444',
   },
   optionDim: {
@@ -292,15 +375,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  optionTextCorrect: {
-    color: '#4CAF50',
-  },
-  optionTextWrong: {
-    color: '#FF4444',
-  },
-  optionTextDim: {
-    color: '#888',
-  },
   emptyEmoji: {
     fontSize: 48,
     marginBottom: 16,
@@ -310,10 +384,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -329,7 +404,7 @@ const styles = StyleSheet.create({
   },
   finishedSubtitle: {
     fontSize: 16,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     marginBottom: 30,
   },
   resultsRow: {
@@ -338,7 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   resultBox: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -351,11 +426,11 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontSize: 12,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -364,5 +439,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

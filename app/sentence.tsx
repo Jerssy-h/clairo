@@ -1,9 +1,12 @@
 import { getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const { height } = Dimensions.get('window');
 
 type Sentence = {
   id: string;
@@ -15,7 +18,9 @@ type Sentence = {
 export default function SentenceScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { topicId, topicTitle } = useLocalSearchParams();
+  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
+  const color = (topicColor as string) || '#059669';
+
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
@@ -91,29 +96,28 @@ export default function SentenceScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#4F46E5" size="large" />
-      </View>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+        <ActivityIndicator color="#FFFFFF" size="large" />
+      </LinearGradient>
     );
   }
 
   if (sentences.length === 0) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.emptyEmoji}>📭</Text>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
         <Text style={styles.emptyText}>{t.noSentencesYet}</Text>
         <Text style={styles.emptySubtext}>{t.addSentencesFromAdmin}</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
   if (finished) {
     const percentage = Math.round((score / sentences.length) * 100);
     return (
-      <View style={styles.center}>
+      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
@@ -133,34 +137,56 @@ export default function SentenceScreen() {
             <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.backToTopics}</Text>
+        <TouchableOpacity
+          style={[styles.actionBtn, { backgroundColor: color }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     );
   }
 
   const sentence = sentences[index];
+  const progress = ((index + 1) / sentences.length) * 100;
 
   return (
     <View style={styles.container}>
-      <View style={styles.progressRow}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+      {/* Background gradient */}
+      <LinearGradient
+        colors={[color + 'CC', color + '44', '#0D0D0D']}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      {/* Giant background character */}
+      <Text style={styles.bgChar}>文</Text>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.topicName}>{topicTitle}</Text>
-        <Text style={styles.progress}>{index + 1}/{sentences.length}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.topicName}>{topicTitle}</Text>
+          <Text style={styles.progressText}>{index + 1} / {sentences.length}</Text>
+        </View>
+        <View style={styles.scorePill}>
+          <Text style={styles.scoreText}>✓ {score}</Text>
+        </View>
       </View>
 
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${((index + 1) / sentences.length) * 100}%` }]} />
+      {/* Progress bar */}
+      <View style={styles.progressBarBg}>
+        <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
+      {/* Russian sentence */}
       <View style={styles.russianCard}>
         <Text style={styles.russianLabel}>{t.translateSentence}</Text>
         <Text style={styles.russianText}>{sentence.russian}</Text>
       </View>
 
+      {/* Answer area */}
       <View style={styles.answerArea}>
         <Text style={styles.areaLabel}>{t.yourAnswer}</Text>
         <View style={[
@@ -175,7 +201,7 @@ export default function SentenceScreen() {
               {selected.map((word, i) => (
                 <TouchableOpacity
                   key={i}
-                  style={styles.selectedWord}
+                  style={[styles.selectedWord, { backgroundColor: color }]}
                   onPress={() => handleRemoveWord(word, i)}
                 >
                   <Text style={styles.selectedWordText}>{word}</Text>
@@ -189,6 +215,7 @@ export default function SentenceScreen() {
         )}
       </View>
 
+      {/* Available words */}
       <View style={styles.availableArea}>
         <Text style={styles.areaLabel}>{t.availableWords}</Text>
         <View style={styles.wordsRow}>
@@ -204,15 +231,23 @@ export default function SentenceScreen() {
         </View>
       </View>
 
+      {/* Button */}
       {result === 'correct' ? (
-        <TouchableOpacity style={styles.checkBtn} onPress={handleNext}>
+        <TouchableOpacity
+          style={[styles.checkBtn, { backgroundColor: color }]}
+          onPress={handleNext}
+        >
           <Text style={styles.checkBtnText}>
             {index === sentences.length - 1 ? t.finish : t.next}
           </Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[styles.checkBtn, selected.length === 0 && styles.checkBtnDisabled]}
+          style={[
+            styles.checkBtn,
+            { backgroundColor: color },
+            selected.length === 0 && styles.checkBtnDisabled
+          ]}
           onPress={handleCheck}
           disabled={selected.length === 0}
         >
@@ -226,57 +261,91 @@ export default function SentenceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#0D0D0D',
     paddingHorizontal: 20,
     paddingTop: 60,
   },
   center: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
-  progressRow: {
+  bgChar: {
+    position: 'absolute',
+    fontSize: 320,
+    color: 'rgba(255,255,255,0.04)',
+    fontWeight: '900',
+    top: height * 0.05,
+    alignSelf: 'center',
+    lineHeight: 340,
+  },
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 12,
   },
-  back: {
-    color: '#888',
-    fontSize: 16,
+  backCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backArrow: {
+    color: '#FFFFFF',
+    fontSize: 18,
+  },
+  headerCenter: {
+    flex: 1,
   },
   topicName: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  progress: {
-    color: '#888',
-    fontSize: 16,
+  progressText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 2,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#1A1A1A',
+  scorePill: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  scoreText: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  progressBarBg: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
-    marginBottom: 24,
+    marginBottom: 20,
+    overflow: 'hidden',
   },
-  progressFill: {
-    height: 4,
-    backgroundColor: '#059669',
+  progressBarFill: {
+    height: 3,
     borderRadius: 2,
   },
   russianCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   russianLabel: {
-    color: '#888',
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
   russianText: {
     color: '#FFFFFF',
@@ -284,32 +353,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   answerArea: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   areaLabel: {
-    color: '#888',
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
   answerBox: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 16,
     padding: 16,
-    minHeight: 70,
+    minHeight: 64,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   answerCorrect: {
     borderColor: '#4CAF50',
-    backgroundColor: '#1A2A1A',
+    backgroundColor: 'rgba(76,175,80,0.1)',
   },
   answerWrong: {
     borderColor: '#FF4444',
-    backgroundColor: '#2A1A1A',
+    backgroundColor: 'rgba(255,68,68,0.1)',
   },
   placeholder: {
-    color: '#555',
+    color: 'rgba(255,255,255,0.25)',
     fontSize: 14,
     textAlign: 'center',
   },
@@ -319,7 +389,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selectedWord: {
-    backgroundColor: '#4F46E5',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -330,23 +399,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   resultText: {
-    color: '#888',
-    fontSize: 14,
+    color: '#FF4444',
+    fontSize: 13,
     marginTop: 8,
+    fontWeight: '600',
   },
   availableArea: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   availableWord: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   wordDim: {
-    opacity: 0.4,
+    opacity: 0.3,
   },
   availableWordText: {
     color: '#FFFFFF',
@@ -354,32 +424,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   checkBtn: {
-    backgroundColor: '#059669',
-    borderRadius: 14,
+    borderRadius: 20,
     padding: 18,
     alignItems: 'center',
   },
   checkBtnDisabled: {
-    opacity: 0.4,
+    opacity: 0.3,
   },
   checkBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -395,7 +461,7 @@ const styles = StyleSheet.create({
   },
   finishedSubtitle: {
     fontSize: 16,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     marginBottom: 30,
   },
   resultsRow: {
@@ -404,7 +470,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   resultBox: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -417,11 +483,11 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontSize: 12,
-    color: '#888',
+    color: 'rgba(255,255,255,0.5)',
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: '#059669',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -430,5 +496,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
