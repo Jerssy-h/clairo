@@ -1,4 +1,5 @@
 import { getCache, setCache } from '@/lib/cache';
+import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -13,6 +14,7 @@ type Sentence = {
 
 export default function SentenceScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { topicId, topicTitle } = useLocalSearchParams();
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,19 +77,16 @@ export default function SentenceScreen() {
       setResult('correct');
       setScore(s => s + 1);
     } else {
-        setResult('wrong');
-        setTimeout(() => {
-          setResult(null);
-        }, 10000);
-      }
+      setResult('wrong');
+      setTimeout(() => {
+        setResult(null);
+      }, 800);
+    }
   };
 
   const handleNext = () => {
-    if (index === sentences.length - 1) {
-      setFinished(true);
-    } else {
-      setIndex(i => i + 1);
-    }
+    if (index === sentences.length - 1) setFinished(true);
+    else setIndex(i => i + 1);
   };
 
   if (loading) {
@@ -102,10 +101,10 @@ export default function SentenceScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>📭</Text>
-        <Text style={styles.emptyText}>No sentences yet</Text>
-        <Text style={styles.emptySubtext}>Add sentences from the Admin panel</Text>
+        <Text style={styles.emptyText}>{t.noSentencesYet}</Text>
+        <Text style={styles.emptySubtext}>{t.addSentencesFromAdmin}</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Go Back</Text>
+          <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -118,24 +117,24 @@ export default function SentenceScreen() {
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
-        <Text style={styles.finishedTitle}>Complete!</Text>
+        <Text style={styles.finishedTitle}>{t.complete2}</Text>
         <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
         <View style={styles.resultsRow}>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{score}</Text>
-            <Text style={styles.resultLabel}>Correct ✅</Text>
+            <Text style={styles.resultLabel}>{t.correct}</Text>
           </View>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{sentences.length - score}</Text>
-            <Text style={styles.resultLabel}>Wrong ❌</Text>
+            <Text style={styles.resultLabel}>{t.wrong}</Text>
           </View>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{percentage}%</Text>
-            <Text style={styles.resultLabel}>Score</Text>
+            <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Back to Topics</Text>
+          <Text style={styles.backBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -145,36 +144,32 @@ export default function SentenceScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.progressRow}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Back</Text>
+          <Text style={styles.back}>{t.back}</Text>
         </TouchableOpacity>
         <Text style={styles.topicName}>{topicTitle}</Text>
         <Text style={styles.progress}>{index + 1}/{sentences.length}</Text>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${((index + 1) / sentences.length) * 100}%` }]} />
       </View>
 
-      {/* Russian sentence */}
       <View style={styles.russianCard}>
-        <Text style={styles.russianLabel}>Translate this sentence:</Text>
+        <Text style={styles.russianLabel}>{t.translateSentence}</Text>
         <Text style={styles.russianText}>{sentence.russian}</Text>
       </View>
 
-      {/* Answer area */}
       <View style={styles.answerArea}>
-        <Text style={styles.areaLabel}>Your answer:</Text>
+        <Text style={styles.areaLabel}>{t.yourAnswer}</Text>
         <View style={[
           styles.answerBox,
           result === 'correct' && styles.answerCorrect,
           result === 'wrong' && styles.answerWrong,
         ]}>
           {selected.length === 0 ? (
-            <Text style={styles.placeholder}>Tap words below to build sentence</Text>
+            <Text style={styles.placeholder}>{t.tapWordsBelow}</Text>
           ) : (
             <View style={styles.wordsRow}>
               {selected.map((word, i) => (
@@ -189,18 +184,13 @@ export default function SentenceScreen() {
             </View>
           )}
         </View>
-        {result === 'correct' && (
-          <Text style={styles.resultText}>✅ Correct!</Text>
-        )}
         {result === 'wrong' && (
-            <Text style={styles.resultText}>❌ Try again...
-        </Text>
-)}
+          <Text style={styles.resultText}>{t.tryAgain}</Text>
+        )}
       </View>
 
-      {/* Available words */}
       <View style={styles.availableArea}>
-        <Text style={styles.areaLabel}>Available words:</Text>
+        <Text style={styles.areaLabel}>{t.availableWords}</Text>
         <View style={styles.wordsRow}>
           {available.map((word, i) => (
             <TouchableOpacity
@@ -214,22 +204,21 @@ export default function SentenceScreen() {
         </View>
       </View>
 
-      {/* Buttons */}
       {result === 'correct' ? (
-  <TouchableOpacity style={styles.checkBtn} onPress={handleNext}>
-    <Text style={styles.checkBtnText}>
-      {index === sentences.length - 1 ? 'Finish 🎉' : 'Next →'}
-    </Text>
-  </TouchableOpacity>
-) : (
-  <TouchableOpacity
-    style={[styles.checkBtn, selected.length === 0 && styles.checkBtnDisabled]}
-    onPress={handleCheck}
-    disabled={selected.length === 0}
-  >
-    <Text style={styles.checkBtnText}>Check ✓</Text>
-  </TouchableOpacity>
-)}
+        <TouchableOpacity style={styles.checkBtn} onPress={handleNext}>
+          <Text style={styles.checkBtnText}>
+            {index === sentences.length - 1 ? t.finish : t.next}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.checkBtn, selected.length === 0 && styles.checkBtnDisabled]}
+          onPress={handleCheck}
+          disabled={selected.length === 0}
+        >
+          <Text style={styles.checkBtnText}>{t.check}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

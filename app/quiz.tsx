@@ -1,4 +1,5 @@
 import { getCache, setCache } from '@/lib/cache';
+import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -17,6 +18,7 @@ function shuffle<T>(array: T[]): T[] {
 
 export default function QuizScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { topicId, topicTitle } = useLocalSearchParams();
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +56,7 @@ export default function QuizScreen() {
 
   const generateOptions = (currentIndex: number) => {
     const current = words[currentIndex];
-    const others = words
-      .filter((_, i) => i !== currentIndex)
-      .map(w => w.english);
+    const others = words.filter((_, i) => i !== currentIndex).map(w => w.english);
     const shuffledOthers = shuffle(others).slice(0, 3);
     const allOptions = shuffle([current.english, ...shuffledOthers]);
     setOptions(allOptions);
@@ -69,13 +69,9 @@ export default function QuizScreen() {
     const isCorrect = answer === words[index].english;
     if (isCorrect) setCorrect(c => c + 1);
     else setWrong(w => w + 1);
-
     setTimeout(() => {
-      if (index === words.length - 1) {
-        setFinished(true);
-      } else {
-        setIndex(i => i + 1);
-      }
+      if (index === words.length - 1) setFinished(true);
+      else setIndex(i => i + 1);
     }, 1000);
   };
 
@@ -105,10 +101,10 @@ export default function QuizScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>⚠️</Text>
-        <Text style={styles.emptyText}>Need at least 4 words</Text>
-        <Text style={styles.emptySubtext}>Add more words to this topic to unlock the quiz</Text>
+        <Text style={styles.emptyText}>{t.need4Words}</Text>
+        <Text style={styles.emptySubtext}>{t.add4Words}</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Go Back</Text>
+          <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -122,24 +118,24 @@ export default function QuizScreen() {
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
-        <Text style={styles.finishedTitle}>Quiz Complete!</Text>
+        <Text style={styles.finishedTitle}>{t.quizComplete}</Text>
         <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
         <View style={styles.resultsRow}>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{correct}</Text>
-            <Text style={styles.resultLabel}>Correct ✅</Text>
+            <Text style={styles.resultLabel}>{t.correct}</Text>
           </View>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{wrong}</Text>
-            <Text style={styles.resultLabel}>Wrong ❌</Text>
+            <Text style={styles.resultLabel}>{t.wrong}</Text>
           </View>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{percentage}%</Text>
-            <Text style={styles.resultLabel}>Score</Text>
+            <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Back to Topics</Text>
+          <Text style={styles.backBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -149,34 +145,29 @@ export default function QuizScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.progressRow}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Back</Text>
+          <Text style={styles.back}>{t.back}</Text>
         </TouchableOpacity>
         <Text style={styles.topicName}>{topicTitle}</Text>
         <Text style={styles.progress}>{index + 1}/{words.length}</Text>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%` }]} />
       </View>
 
-      {/* Score */}
       <View style={styles.scoreRow}>
         <Text style={styles.scoreCorrect}>✅ {correct}</Text>
         <Text style={styles.scoreWrong}>❌ {wrong}</Text>
       </View>
 
-      {/* Question */}
       <View style={styles.card}>
         <Text style={styles.questionLabel}>What does this mean?</Text>
         <Text style={styles.chinese}>{card.chinese}</Text>
         <Text style={styles.pinyin}>{card.pinyin}</Text>
       </View>
 
-      {/* Options */}
       <View style={styles.optionsContainer}>
         {options.map((option) => (
           <TouchableOpacity

@@ -1,5 +1,6 @@
 import { getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
+import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ type Word = {
 
 export default function FlashcardScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { topicId, topicTitle } = useLocalSearchParams();
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +57,7 @@ export default function FlashcardScreen() {
   };
 
   const saveProgress = async (wordId: string, isKnown: boolean) => {
-    if (!deviceId) {
-      console.log('NO DEVICE ID - skipping save');
-      return;
-    }
+    if (!deviceId) return;
     const { error } = await supabase.from('progress').upsert({
       device_id: deviceId,
       word_id: wordId,
@@ -71,10 +70,8 @@ export default function FlashcardScreen() {
   const handleNext = async (didKnow: boolean) => {
     const currentWord = words[index];
     await saveProgress(currentWord.id, didKnow);
-
     if (didKnow) setKnown(k => k + 1);
     else setUnknown(u => u + 1);
-
     if (index === words.length - 1) {
       setFinished(true);
       return;
@@ -95,10 +92,10 @@ export default function FlashcardScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>📭</Text>
-        <Text style={styles.emptyText}>No words in this topic yet</Text>
-        <Text style={styles.emptySubtext}>Add words from the Admin panel</Text>
+        <Text style={styles.emptyText}>{t.noWordsInTopic}</Text>
+        <Text style={styles.emptySubtext}>{t.addWordsFromAdmin}</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Go Back</Text>
+          <Text style={styles.backBtnText}>{t.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -108,20 +105,20 @@ export default function FlashcardScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.finishedEmoji}>🎉</Text>
-        <Text style={styles.finishedTitle}>Session Complete!</Text>
+        <Text style={styles.finishedTitle}>{t.sessionComplete}</Text>
         <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
         <View style={styles.resultsRow}>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{known}</Text>
-            <Text style={styles.resultLabel}>Known ✅</Text>
+            <Text style={styles.resultLabel}>{t.known}</Text>
           </View>
           <View style={styles.resultBox}>
             <Text style={styles.resultNumber}>{unknown}</Text>
-            <Text style={styles.resultLabel}>Review ❌</Text>
+            <Text style={styles.resultLabel}>{t.review}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Back to Topics</Text>
+          <Text style={styles.backBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -133,7 +130,7 @@ export default function FlashcardScreen() {
     <View style={styles.container}>
       <View style={styles.progressRow}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Back</Text>
+          <Text style={styles.back}>{t.back}</Text>
         </TouchableOpacity>
         <Text style={styles.topicName}>{topicTitle}</Text>
         <Text style={styles.progress}>{index + 1}/{words.length}</Text>
@@ -150,7 +147,7 @@ export default function FlashcardScreen() {
           {flipped ? (
             <Text style={styles.english}>{card.english}</Text>
           ) : (
-            <Text style={styles.hint}>Tap to reveal</Text>
+            <Text style={styles.hint}>{t.tapToReveal}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -158,10 +155,10 @@ export default function FlashcardScreen() {
       {flipped && (
         <View style={styles.buttons}>
           <TouchableOpacity style={styles.btnNo} onPress={() => handleNext(false)}>
-            <Text style={styles.btnText}>❌ Again</Text>
+            <Text style={styles.btnText}>{t.again}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnYes} onPress={() => handleNext(true)}>
-            <Text style={styles.btnText}>✅ Got it</Text>
+            <Text style={styles.btnText}>{t.gotIt}</Text>
           </TouchableOpacity>
         </View>
       )}

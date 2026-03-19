@@ -1,3 +1,4 @@
+import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -5,6 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 export default function TopicScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { topicId, topicTitle, topicColor, topicEmoji } = useLocalSearchParams();
   const [wordCount, setWordCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -26,32 +28,24 @@ export default function TopicScreen() {
     {
       id: 'flashcard',
       emoji: '📚',
-      title: 'Flashcards',
-      description: 'Flip cards to learn words',
+      title: t.flashcards,
+      description: t.flipToLearn,
       color: '#4F46E5',
       minWords: 1,
     },
     {
       id: 'quiz',
       emoji: '🧠',
-      title: 'Quiz',
-      description: 'Multiple choice questions',
+      title: t.quiz,
+      description: t.multipleChoice,
       color: '#7C3AED',
       minWords: 4,
     },
     {
-        id: 'sentence',
-        emoji: '🧩',
-        title: 'Sentence Builder',
-        description: 'Arrange Chinese words in correct order',
-        color: '#059669',
-        minWords: 1,
-      },
-    {
-      id: 'pinyin',
-      emoji: '✍️',
-      title: 'Write Pinyin',
-      description: 'Type the pronunciation',
+      id: 'sentence',
+      emoji: '🧩',
+      title: t.sentenceBuilder,
+      description: t.arrangeWords,
       color: '#059669',
       minWords: 1,
     },
@@ -59,47 +53,35 @@ export default function TopicScreen() {
 
   const handleActivity = (activityId: string, minWords: number) => {
     if (wordCount < minWords) {
-      const msg = activityId === 'quiz'
-        ? 'You need at least 4 words to start the quiz.'
-        : 'Add at least 1 word to start this activity.';
-      alert(msg);
-      return;
-    }
-    if (activityId === 'sentence') {
-        router.push({ pathname: '/sentence', params: { topicId, topicTitle } });
-        return;
-      }
-    if (activityId === 'pinyin') {
-      alert('Coming soon! 🚧');
+      alert(activityId === 'quiz' ? t.add4Words : t.addWordsFromAdmin);
       return;
     }
     if (activityId === 'flashcard') {
-        router.push({ pathname: '/flashcard', params: { topicId, topicTitle } });
-      } else if (activityId === 'quiz') {
-        router.push({ pathname: '/quiz', params: { topicId, topicTitle } });
-      }
+      router.push({ pathname: '/flashcard', params: { topicId, topicTitle } });
+    } else if (activityId === 'quiz') {
+      router.push({ pathname: '/quiz', params: { topicId, topicTitle } });
+    } else if (activityId === 'sentence') {
+      router.push({ pathname: '/sentence', params: { topicId, topicTitle } });
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={styles.backText}>{t.back}</Text>
       </TouchableOpacity>
 
-      {/* Topic Hero */}
       <View style={[styles.hero, { borderLeftColor: topicColor as string }]}>
         <Text style={styles.heroEmoji}>{topicEmoji}</Text>
         <Text style={styles.heroTitle}>{topicTitle}</Text>
         {loading ? (
           <ActivityIndicator color="#888" size="small" />
         ) : (
-          <Text style={styles.heroMeta}>{wordCount} words</Text>
+          <Text style={styles.heroMeta}>{wordCount} {t.words}</Text>
         )}
       </View>
 
-      {/* Activities */}
-      <Text style={styles.sectionTitle}>Choose Activity</Text>
+      <Text style={styles.sectionTitle}>{t.chooseActivity}</Text>
       <View style={styles.activitiesContainer}>
         {activities.map((activity) => {
           const locked = wordCount < activity.minWords;
