@@ -178,6 +178,7 @@ export default function AdminScreen() {
           clearCache('topics');
           clearCache(`words_${id}`);
           clearCache(`sentences_${id}`);
+          clearCache(`word_map_${id}`);
           fetchTopics();
         },
       },
@@ -203,6 +204,20 @@ export default function AdminScreen() {
       Alert.alert('Missing fields', 'Please fill in all fields');
       return;
     }
+
+    // Prevent duplicate Chinese strings inside the same topic.
+    // Sentence Builder relies on mapping `words.chinese -> words.id`.
+    const { data: existing } = await supabase
+      .from('words')
+      .select('id')
+      .eq('topic_id', selectedTopic.id)
+      .eq('chinese', chinese)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      Alert.alert('Duplicate word', 'That Chinese word already exists in this topic.');
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.from('words').insert({
       topic_id: selectedTopic.id,
@@ -215,6 +230,7 @@ export default function AdminScreen() {
     else {
       setChinese(''); setPinyin(''); setEnglish(''); setWordRussian('');
       clearCache(`words_${selectedTopic.id}`);
+      clearCache(`word_map_${selectedTopic.id}`);
       fetchWords();
     }
     setLoading(false);
@@ -222,6 +238,20 @@ export default function AdminScreen() {
 
   const updateWord = async () => {
     if (!editWord) return;
+
+    // Prevent duplicate Chinese strings inside the same topic.
+    const { data: existing } = await supabase
+      .from('words')
+      .select('id')
+      .eq('topic_id', editWord.topic_id)
+      .eq('chinese', editWord.chinese)
+      .neq('id', editWord.id)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      Alert.alert('Duplicate word', 'That Chinese word already exists in this topic.');
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.from('words').update({
       chinese: editWord.chinese,
@@ -233,6 +263,7 @@ export default function AdminScreen() {
     else {
       setEditWord(null);
       clearCache(`words_${editWord.topic_id}`);
+      clearCache(`word_map_${editWord.topic_id}`);
       fetchWords();
     }
     setLoading(false);
@@ -245,7 +276,10 @@ export default function AdminScreen() {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           await supabase.from('words').delete().eq('id', id);
-          if (selectedTopic) clearCache(`words_${selectedTopic.id}`);
+          if (selectedTopic) {
+            clearCache(`words_${selectedTopic.id}`);
+            clearCache(`word_map_${selectedTopic.id}`);
+          }
           fetchWords();
         },
       },

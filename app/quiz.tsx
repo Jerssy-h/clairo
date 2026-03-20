@@ -42,6 +42,11 @@ export default function QuizScreen() {
     setup();
   }, []);
 
+  // Refresh Home topic progress when leaving the quiz.
+  useEffect(() => {
+    return () => clearCache('topics');
+  }, []);
+
   useEffect(() => {
     if (words.length > 0) generateOptions(index);
   }, [words, index]);
@@ -78,8 +83,6 @@ export default function QuizScreen() {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'device_id,word_id' });
     if (error) console.error(error.message);
-    // Ensure Home recomputes topic progress immediately after changes.
-    clearCache('topics');
   };
 
   const generateOptions = (currentIndex: number) => {
@@ -111,7 +114,10 @@ export default function QuizScreen() {
     });
 
     setTimeout(() => {
-      if (index === words.length - 1) setFinished(true);
+      if (index === words.length - 1) {
+        clearCache('topics');
+        setFinished(true);
+      }
       else setIndex(i => i + 1);
     }, 900);
   };
