@@ -1,5 +1,6 @@
-import { getCache, setCache } from '@/lib/cache';
+import { clearCache, getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getDeviceId } from '@/lib/device';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,9 +35,11 @@ export default function QuizScreen() {
   const [wrong, setWrong] = useState(0);
   const [finished, setFinished] = useState(false);
   const [combo, setCombo] = useState(0);
+  const [deviceId, setDeviceId] = useState('');
+  const [savingAnswer, setSavingAnswer] = useState(false);
 
   useEffect(() => {
-    fetchWords();
+    setup();
   }, []);
 
   useEffect(() => {
@@ -60,6 +63,25 @@ export default function QuizScreen() {
     setLoading(false);
   };
 
+  const setup = async () => {
+    const id = await getDeviceId();
+    setDeviceId(id);
+    fetchWords();
+  };
+
+  const saveProgress = async (wordId: string, isKnown: boolean) => {
+    if (!deviceId) return;
+    const { error } = await supabase.from('progress').upsert({
+      device_id: deviceId,
+      word_id: wordId,
+      known: isKnown,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'device_id,word_id' });
+    if (error) console.error(error.message);
+    // Ensure Home recomputes topic progress immediately after changes.
+    clearCache('topics');
+  };
+
   const generateOptions = (currentIndex: number) => {
     const current = words[currentIndex];
     const others = words.filter((_, i) => i !== currentIndex).map(w => w.english);
@@ -70,9 +92,11 @@ export default function QuizScreen() {
   };
 
   const handleAnswer = (answer: string) => {
-    if (selected) return;
+    if (selected || savingAnswer) return;
     setSelected(answer);
     const isCorrect = answer === words[index].english;
+
+    setSavingAnswer(true);
     if (isCorrect) {
       setCorrect(c => c + 1);
       setCombo(c => c + 1);
@@ -80,6 +104,12 @@ export default function QuizScreen() {
       setWrong(w => w + 1);
       setCombo(0);
     }
+
+    // Persist the result for this word in the same table used by flashcards.
+    saveProgress(words[index].id, isCorrect).finally(() => {
+      setSavingAnswer(false);
+    });
+
     setTimeout(() => {
       if (index === words.length - 1) setFinished(true);
       else setIndex(i => i + 1);

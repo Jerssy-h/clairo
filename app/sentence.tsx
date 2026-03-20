@@ -1,4 +1,5 @@
-import { getCache, setCache } from '@/lib/cache';
+import { clearCache, getCache, setCache } from '@/lib/cache';
+import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,9 +30,12 @@ export default function SentenceScreen() {
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [deviceId, setDeviceId] = useState('');
+  const [savingAnswer, setSavingAnswer] = useState(false);
+  const [wordIdByChinese, setWordIdByChinese] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchSentences();
+    setup();
   }, []);
 
   useEffect(() => {
@@ -41,6 +45,28 @@ export default function SentenceScreen() {
       setResult(null);
     }
   }, [sentences, index]);
+
+  const fetchWordIdMapping = async () => {
+    const cacheKey = `word_map_${topicId}`;
+    const cached = getCache<Record<string, string>>(cacheKey);
+    if (cached) {
+      setWordIdByChinese(cached);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('words')
+      .select('id, chinese')
+      .eq('topic_id', topicId);
+
+    const mapping: Record<string, string> = {};
+    (data || []).forEach((w) => {
+      if (w.chinese && w.id) mapping[w.chinese] = w.id;
+    });
+
+    setWordIdByChinese(mapping);
+    setCache(cacheKey, mapping);
+  };
 
   const fetchSentences = async () => {
     const cacheKey = `sentences_${topicId}`;
@@ -59,6 +85,14 @@ export default function SentenceScreen() {
     setLoading(false);
   };
 
+  const setup = async () => {
+    const id = await getDeviceId();
+    setDeviceId(id);
+    setLoading(true);
+    await fetchWordIdMapping();
+    await fetchSentences();
+  };
+
   const handleSelectWord = (word: string, wordIndex: number) => {
     if (result) return;
     const newAvailable = [...available];
@@ -75,9 +109,42 @@ export default function SentenceScreen() {
     setAvailable([...available, word]);
   };
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
+    if (result || savingAnswer) return;
+
     const correct = sentences[index].correct_order;
     const isCorrect = selected.join(' ') === correct.join(' ');
+
+    // Persist each word involved in the sentence.
+    // Only mark words as "known" when the reconstructed sentence is correct.
+    // This avoids regressing progress while users are still learning word order.
+    setSavingAnswer(true);
+    try {
+      const targetWordIds = Array.from(
+        new Set(
+          correct
+            .map((chinese) => wordIdByChinese[chinese])
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+        )
+      );
+
+      if (isCorrect && deviceId && targetWordIds.length > 0) {
+        await Promise.all(
+          targetWordIds.map((wordId) =>
+            supabase.from('progress').upsert({
+              device_id: deviceId,
+              word_id: wordId,
+              known: true,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'device_id,word_id' })
+          )
+        );
+        clearCache('topics');
+      }
+    } finally {
+      setSavingAnswer(false);
+    }
+
     if (isCorrect) {
       setResult('correct');
       setScore(s => s + 1);

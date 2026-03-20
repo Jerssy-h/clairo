@@ -1,4 +1,5 @@
 import { clearCache } from '@/lib/cache';
+import { isAdmin } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import {
@@ -38,7 +39,7 @@ type Sentence = {
 };
 
 const COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626', '#0891B2'];
-const ADMIN_PASSWORD = 'clairo2006';
+const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_ADMIN_PASSWORD ?? '';
 
 export default function AdminScreen() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -69,6 +70,13 @@ export default function AdminScreen() {
   const [editSentence, setEditSentence] = useState<Sentence | null>(null);
 
   useEffect(() => {
+    // Auto-authenticate admin devices (device allowlist is configured via env).
+    isAdmin().then((ok) => {
+      if (ok) setAuthenticated(true);
+    });
+  }, []);
+
+  useEffect(() => {
     if (authenticated) fetchTopics();
   }, [authenticated]);
 
@@ -80,7 +88,7 @@ export default function AdminScreen() {
   }, [selectedTopic]);
 
   const handleLogin = () => {
-    if (passwordInput === ADMIN_PASSWORD) {
+    if (ADMIN_PASSWORD && passwordInput === ADMIN_PASSWORD) {
       setAuthenticated(true);
       setPasswordError(false);
     } else {
@@ -444,7 +452,7 @@ export default function AdminScreen() {
             {selectedTopic && (
               <>
                 <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-                  Words in "{selectedTopic.title}" ({words.length})
+                  Words in &quot;{selectedTopic.title}&quot; ({words.length})
                 </Text>
                 {words.length === 0 ? (
                   <Text style={styles.emptyText}>No words yet</Text>
@@ -509,7 +517,7 @@ export default function AdminScreen() {
             {selectedTopic && (
               <>
                 <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-                  Sentences in "{selectedTopic.title}" ({sentences.length})
+                  Sentences in &quot;{selectedTopic.title}&quot; ({sentences.length})
                 </Text>
                 {sentences.length === 0 ? (
                   <Text style={styles.emptyText}>No sentences yet</Text>

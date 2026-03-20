@@ -1,8 +1,9 @@
 import { getDeviceId } from './device';
 
-const ADMIN_DEVICE_IDS = [
-  '004BBA48-C6B0-458B-8B4B-7365E968F374', // Emir's iPhone
-];
+const ADMIN_DEVICE_IDS = (process.env.EXPO_PUBLIC_ADMIN_DEVICE_IDS ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 
 export const isAdmin = async (): Promise<boolean> => {
   const id = await getDeviceId();
