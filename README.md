@@ -20,7 +20,7 @@
 
 Clairo is a mobile app built specifically for **CIS students preparing to study in China**. Most Chinese learning apps are built for English speakers — Clairo speaks Russian first.
 
-Built by [Emir Dzhaksybekov](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**, Turkmenistan 🇹🇲
+Built by [Emir Babayev](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**
 
 > *"I needed an app that actually worked for students like me — Russian-speaking, going to Beijing, learning from scratch."*
 
@@ -167,7 +167,7 @@ This project is open source and built in public. If you're a Russian-speaking st
 
 ## License
 
-MIT © [Emir Dzhaksybekov](https://github.com/Jerssy-h)
+MIT © [Emir Babayev](https://github.com/Jerssy-h)
 
 ---
 
