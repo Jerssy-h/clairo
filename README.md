@@ -2,7 +2,7 @@
 
 # 克 Clairo
 
-### Chinese learning app for Russian-speaking students
+### Chinese learning app for everyone who cares
 
 **Flashcards · Quiz · Sentence Builder · Stroke Order**
 
@@ -18,11 +18,11 @@
 
 ## What is Clairo?
 
-Clairo is a mobile app built specifically for **CIS students preparing to study in China**. Most Chinese learning apps are built for English speakers — Clairo speaks Russian first.
+Clairo is a mobile app built specifically for **CIS students preparing to study in China**. Most Chinese learning apps are built for English speakers — Clairo covers all.
 
 Built by [Emir Babayev](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**
 
-> *"I needed an app that actually worked for students like me — Russian-speaking, going to Beijing, learning from scratch."*
+> *"I wanted to create a tool that will provide everything people need to become good at learning language."*
 
 ---
 
@@ -173,7 +173,7 @@ MIT © [Emir Babayev](https://github.com/Jerssy-h)
 
 <div align="center">
 
-Built with ❤️ in Turkmenistan · Deployed in Beijing
+Built with obsession · Deployed all over the world
 
 **[⭐ Star this repo](https://github.com/Jerssy-h/clairo)** if you find it useful
 
