@@ -1,4 +1,5 @@
-import { getCache, setCache } from '@/lib/cache';
+import { clearCache, getCache, setCache } from '@/lib/cache';
+import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { HanziWriter, useHanziWriter } from '@jamsch/react-native-hanzi-writer';
@@ -247,8 +248,12 @@ export default function StrokeScreen() {
   const [phase, setPhase] = useState<Phase>('watch');
   const [round, setRound] = useState(0);
   const [allDone, setAllDone] = useState(false);
+  const [deviceId, setDeviceId] = useState('');
 
-  useEffect(() => { fetchWords(); }, []);
+  useEffect(() => {
+    getDeviceId().then(setDeviceId);
+    fetchWords();
+  }, []);
 
   const fetchWords = async () => {
     const cacheKey = `words_${topicId}`;
@@ -258,6 +263,18 @@ export default function StrokeScreen() {
     if (error) console.error(error);
     else { setWords(data || []); setCache(cacheKey, data || []); }
     setLoading(false);
+  };
+
+  const saveProgress = async (wordId: string) => {
+    if (!deviceId) return;
+    const { error } = await supabase.from('progress').upsert({
+      device_id: deviceId,
+      word_id: wordId,
+      known: true,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'device_id,word_id' });
+    if (error) console.error(error.message);
+    clearCache('topics');
   };
 
   const goTo = (i: number) => {
@@ -270,6 +287,9 @@ export default function StrokeScreen() {
   const handleRoundComplete = () => {
     const next = round + 1;
     if (next >= TOTAL_ROUNDS) {
+      // Save progress — word mastered after all rounds
+      const wordId = words[index]?.id;
+      if (wordId) saveProgress(wordId);
       // Auto-advance to next word
       if (index < words.length - 1) {
         setTimeout(() => goTo(index + 1), 600);
