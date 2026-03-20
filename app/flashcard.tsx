@@ -27,7 +27,7 @@ type Word = {
 
 export default function FlashcardScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { topicId, topicTitle, topicColor } = useLocalSearchParams();
   const color = (topicColor as string) || '#4F46E5';
 
@@ -318,12 +318,9 @@ export default function FlashcardScreen() {
             <Text style={styles.cardChinese}>{card.chinese}</Text>
             <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
             <View style={styles.dividerLine} />
-            {/* Russian translation (primary) */}
-            <Text style={styles.cardRussian}>{card.russian ?? card.english}</Text>
-            {/* English translation (secondary) */}
-            {card.russian && (
-              <Text style={styles.cardEnglish}>{card.english}</Text>
-            )}
+            <Text style={styles.cardRussian}>
+              {language === 'ru' ? (card.russian ?? card.english) : card.english}
+            </Text>
           </Animated.View>
         </TouchableOpacity>
       </Animated.View>
@@ -340,7 +337,7 @@ export default function FlashcardScreen() {
           activeOpacity={flipped ? 0.7 : 1}
         >
           <Text style={[styles.btnIcon, !flipped && styles.btnIconDisabled]}>✕</Text>
-          <Text style={[styles.btnLabel, !flipped && styles.btnLabelDisabled]}>Ещё раз</Text>
+          <Text style={[styles.btnLabel, !flipped && styles.btnLabelDisabled]}>{t.again}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -353,7 +350,7 @@ export default function FlashcardScreen() {
           activeOpacity={flipped ? 0.7 : 1}
         >
           <Text style={[styles.btnIcon, !flipped && styles.btnIconDisabled]}>✓</Text>
-          <Text style={[styles.btnLabel, !flipped && styles.btnLabelDisabled]}>Знаю</Text>
+          <Text style={[styles.btnLabel, !flipped && styles.btnLabelDisabled]}>{t.gotIt}</Text>
         </TouchableOpacity>
       </View>
     </View>

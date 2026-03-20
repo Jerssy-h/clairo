@@ -1,5 +1,5 @@
-import { clearCache } from '@/lib/cache';
 import { isAdmin } from '@/lib/auth';
+import { clearCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import {
@@ -27,6 +27,7 @@ type Word = {
   chinese: string;
   pinyin: string;
   english: string;
+  russian: string;
   topic_id: string;
 };
 
@@ -61,6 +62,7 @@ export default function AdminScreen() {
   const [chinese, setChinese] = useState('');
   const [pinyin, setPinyin] = useState('');
   const [english, setEnglish] = useState('');
+  const [wordRussian, setWordRussian] = useState('');
 
   const [russian, setRussian] = useState('');
   const [chineseWords, setChineseWords] = useState('');
@@ -70,7 +72,6 @@ export default function AdminScreen() {
   const [editSentence, setEditSentence] = useState<Sentence | null>(null);
 
   useEffect(() => {
-    // Auto-authenticate admin devices (device allowlist is configured via env).
     isAdmin().then((ok) => {
       if (ok) setAuthenticated(true);
     });
@@ -198,18 +199,21 @@ export default function AdminScreen() {
   // WORDS
   const addWord = async () => {
     if (!selectedTopic) { Alert.alert('Select a topic first'); return; }
-    if (!chinese || !pinyin || !english) {
+    if (!chinese || !pinyin || !english || !wordRussian) {
       Alert.alert('Missing fields', 'Please fill in all fields');
       return;
     }
     setLoading(true);
     const { error } = await supabase.from('words').insert({
       topic_id: selectedTopic.id,
-      chinese, pinyin, english,
+      chinese,
+      pinyin,
+      english,
+      russian: wordRussian,
     });
     if (error) Alert.alert('Error', error.message);
     else {
-      setChinese(''); setPinyin(''); setEnglish('');
+      setChinese(''); setPinyin(''); setEnglish(''); setWordRussian('');
       clearCache(`words_${selectedTopic.id}`);
       fetchWords();
     }
@@ -223,6 +227,7 @@ export default function AdminScreen() {
       chinese: editWord.chinese,
       pinyin: editWord.pinyin,
       english: editWord.english,
+      russian: editWord.russian,
     }).eq('id', editWord.id);
     if (error) Alert.alert('Error', error.message);
     else {
@@ -445,6 +450,13 @@ export default function AdminScreen() {
               value={english}
               onChangeText={setEnglish}
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Russian (e.g. Привет)"
+              placeholderTextColor="#555"
+              value={wordRussian}
+              onChangeText={setWordRussian}
+            />
             <TouchableOpacity style={styles.btn} onPress={addWord} disabled={loading}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Word</Text>}
             </TouchableOpacity>
@@ -461,7 +473,7 @@ export default function AdminScreen() {
                     <View key={w.id} style={styles.row}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.rowChinese}>{w.chinese}</Text>
-                        <Text style={styles.rowPinyin}>{w.pinyin} · {w.english}</Text>
+                        <Text style={styles.rowPinyin}>{w.pinyin} · {w.russian || w.english}</Text>
                       </View>
                       <View style={styles.rowActions}>
                         <TouchableOpacity onPress={() => setEditWord(w)} style={styles.iconBtn}>
@@ -611,6 +623,13 @@ export default function AdminScreen() {
               placeholder="English"
               placeholderTextColor="#555"
             />
+            <TextInput
+              style={styles.input}
+              value={editWord?.russian}
+              onChangeText={v => setEditWord(e => e ? { ...e, russian: v } : null)}
+              placeholder="Russian"
+              placeholderTextColor="#555"
+            />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setEditWord(null)}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
@@ -658,218 +677,45 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  authContainer: {
-    flex: 1,
-    backgroundColor: '#0F0F0F',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  authEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  authTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 24,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 16,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-  },
-  tabBtnActive: {
-    backgroundColor: '#4F46E5',
-  },
-  tabText: {
-    color: '#888',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  scroll: {
-    flex: 1,
-  },
-  section: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#888',
-    letterSpacing: 0.5,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 10,
-    padding: 14,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  inputError: {
-    borderColor: '#FF4444',
-  },
-  errorText: {
-    color: '#FF4444',
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  colorRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  colorDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  colorSelected: {
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  btn: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-  },
-  btnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    gap: 10,
-  },
-  rowAccent: {
-    width: 3,
-    height: 24,
-    borderRadius: 2,
-  },
-  rowEmoji: {
-    fontSize: 18,
-  },
-  rowTitle: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  rowChinese: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  rowPinyin: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  rowActions: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  iconBtn: {
-    padding: 6,
-  },
-  iconBtnText: {
-    fontSize: 16,
-  },
-  chip: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  chipSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#1a1a3a',
-  },
-  chipText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  emptyText: {
-    color: '#555',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingVertical: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modal: {
-    backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 20,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  modalCancel: {
-    flex: 1,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    color: '#888',
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: '#0F0F0F' },
+  authContainer: { flex: 1, backgroundColor: '#0F0F0F', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  authEmoji: { fontSize: 48, marginBottom: 16 },
+  authTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 24 },
+  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
+  title: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
+  tabBar: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: '#1A1A1A' },
+  tabBtnActive: { backgroundColor: '#4F46E5' },
+  tabText: { color: '#888', fontSize: 14, fontWeight: '600' },
+  tabTextActive: { color: '#FFFFFF' },
+  scroll: { flex: 1 },
+  section: { paddingHorizontal: 20, paddingBottom: 40 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#888', letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },
+  input: { backgroundColor: '#1A1A1A', borderRadius: 10, padding: 14, color: '#FFFFFF', fontSize: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2A2A2A' },
+  inputError: { borderColor: '#FF4444' },
+  errorText: { color: '#FF4444', fontSize: 13, marginBottom: 10 },
+  colorRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  colorDot: { width: 28, height: 28, borderRadius: 14 },
+  colorSelected: { borderWidth: 3, borderColor: '#FFFFFF' },
+  btn: { backgroundColor: '#4F46E5', borderRadius: 10, padding: 14, alignItems: 'center' },
+  btnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', borderRadius: 10, padding: 12, marginBottom: 8, gap: 10 },
+  rowAccent: { width: 3, height: 24, borderRadius: 2 },
+  rowEmoji: { fontSize: 18 },
+  rowTitle: { flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  rowChinese: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
+  rowPinyin: { color: '#888', fontSize: 12, marginTop: 2 },
+  rowActions: { flexDirection: 'row', gap: 4 },
+  iconBtn: { padding: 6 },
+  iconBtnText: { fontSize: 16 },
+  chip: { backgroundColor: '#1A1A1A', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: '#2A2A2A' },
+  chipSelected: { borderColor: '#4F46E5', backgroundColor: '#1a1a3a' },
+  chipText: { color: '#FFFFFF', fontSize: 14 },
+  emptyText: { color: '#555', fontSize: 14, textAlign: 'center', paddingVertical: 20 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modal: { backgroundColor: '#1A1A1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalCancel: { flex: 1, backgroundColor: '#2A2A2A', borderRadius: 10, padding: 14, alignItems: 'center' },
+  modalCancelText: { color: '#888', fontSize: 15, fontWeight: '600' },
 });
