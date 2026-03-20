@@ -56,6 +56,15 @@ export default function TopicScreen() {
       icon: '句',
       minWords: 1,
     },
+    {
+      id: 'stroke',
+      title: t.strokeOrder,
+      description: t.strokeDescription,
+      color: '#D97706',
+      accentColor: '#F59E0B',
+      icon: '笔',
+      minWords: 1,
+    },
   ];
 
   const handleActivity = (activityId: string, minWords: number) => {
@@ -69,26 +78,24 @@ export default function TopicScreen() {
       router.push({ pathname: '/quiz', params: { topicId, topicTitle, topicColor } });
     } else if (activityId === 'sentence') {
       router.push({ pathname: '/sentence', params: { topicId, topicTitle, topicColor } });
+    } else if (activityId === 'stroke') {
+      router.push({ pathname: '/stroke', params: { topicId, topicTitle, topicColor } });
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Full background gradient */}
       <LinearGradient
         colors={[color + 'CC', color + '44', '#0D0D0D', '#0D0D0D']}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Giant background character */}
       <Text style={styles.bgChar}>{(topicTitle as string)?.[0] || '中'}</Text>
 
-      {/* Back button */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
         <Text style={styles.backArrow}>←</Text>
       </TouchableOpacity>
 
-      {/* Hero */}
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>{topicTitle}</Text>
         {loading ? (
@@ -102,7 +109,6 @@ export default function TopicScreen() {
         )}
       </View>
 
-      {/* Activities */}
       <Text style={styles.sectionLabel}>{t.chooseActivity}</Text>
       <View style={styles.activitiesContainer}>
         {activities.map((activity) => {
@@ -114,9 +120,7 @@ export default function TopicScreen() {
               onPress={() => handleActivity(activity.id, activity.minWords)}
               activeOpacity={0.85}
             >
-              {/* Glass effect */}
               <View style={styles.activityCardInner}>
-                {/* Left icon */}
                 <LinearGradient
                   colors={[activity.color, activity.accentColor]}
                   style={styles.activityIconBox}
@@ -124,13 +128,11 @@ export default function TopicScreen() {
                   <Text style={styles.activityIconText}>{activity.icon}</Text>
                 </LinearGradient>
 
-                {/* Info */}
                 <View style={styles.activityInfo}>
                   <Text style={styles.activityTitle}>{activity.title}</Text>
                   <Text style={styles.activityDescription}>{activity.description}</Text>
                 </View>
 
-                {/* Right indicator */}
                 {locked ? (
                   <View style={styles.lockBox}>
                     <Text style={styles.lockText}>🔒</Text>
@@ -142,7 +144,6 @@ export default function TopicScreen() {
                 )}
               </View>
 
-              {/* Bottom accent line */}
               <View style={[styles.activityAccent, { backgroundColor: activity.color }]} />
             </TouchableOpacity>
           );
@@ -169,121 +170,43 @@ const styles = StyleSheet.create({
     lineHeight: 340,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     marginBottom: 32,
   },
-  backArrow: {
-    color: '#FFFFFF',
-    fontSize: 18,
-  },
-  hero: {
-    marginBottom: 40,
-  },
-  heroTitle: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-    marginBottom: 12,
-  },
-  heroMeta: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  backArrow: { color: '#FFFFFF', fontSize: 18 },
+  hero: { marginBottom: 40 },
+  heroTitle: { fontSize: 36, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1, marginBottom: 12 },
+  heroMeta: { flexDirection: 'row', gap: 8 },
   metaBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  metaBadgeText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  metaBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.4)',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 14,
+    fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1, textTransform: 'uppercase', marginBottom: 14,
   },
-  activitiesContainer: {
-    gap: 12,
-  },
+  activitiesContainer: { gap: 12 },
   activityCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', overflow: 'hidden',
   },
-  activityCardInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 14,
-  },
-  activityLocked: {
-    opacity: 0.4,
-  },
-  activityIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activityIconText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 3,
-  },
-  activityDescription: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
-    lineHeight: 18,
-  },
+  activityCardInner: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
+  activityLocked: { opacity: 0.4 },
+  activityIconBox: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  activityIconText: { fontSize: 22, fontWeight: '800', color: '#FFFFFF' },
+  activityInfo: { flex: 1 },
+  activityTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 3 },
+  activityDescription: { fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 18 },
   lockBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 36, height: 36, borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  lockText: {
-    fontSize: 16,
-  },
-  arrowBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  activityAccent: {
-    height: 2,
-    opacity: 0.6,
-  },
+  lockText: { fontSize: 16 },
+  arrowBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  arrowText: { fontSize: 18, fontWeight: '700' },
+  activityAccent: { height: 2, opacity: 0.6 },
 });
