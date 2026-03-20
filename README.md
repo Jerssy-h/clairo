@@ -1,113 +1,180 @@
-# Clairo
+<div align="center">
 
-**The Chinese learning app built for the next generation of students heading to China.**
+# 克 Clairo
 
-Clairo is a mobile-first language learning platform designed specifically for Russian-speaking students preparing for university life in China. Unlike generic apps, Clairo focuses on real survival Chinese — the words, phrases, and sentence structures you actually need.
+### Chinese learning app for Russian-speaking students
+
+**Flashcards · Quiz · Sentence Builder · Stroke Order**
+
+[![React Native](https://img.shields.io/badge/React_Native-0.76-61DAFB?style=flat-square&logo=react)](https://reactnative.dev)
+[![Expo](https://img.shields.io/badge/Expo-52-000020?style=flat-square&logo=expo)](https://expo.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+
+</div>
 
 ---
 
-## The Problem
+## What is Clairo?
 
-Millions of CIS students study in China every year. Most of them arrive unprepared — relying on Google Translate, struggling with tones, unable to construct basic sentences. Existing apps like Duolingo are built for English speakers and miss the cultural and linguistic context that Russian speakers need.
+Clairo is a mobile app built specifically for **CIS students preparing to study in China**. Most Chinese learning apps are built for English speakers — Clairo speaks Russian first.
 
-Clairo is built by a student, for students — with content curated from real Chinese study sessions.
+Built by [Emir Dzhaksybekov](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**, Turkmenistan 🇹🇲
+
+> *"I needed an app that actually worked for students like me — Russian-speaking, going to Beijing, learning from scratch."*
 
 ---
 
-## Core Features
+## Features
 
-| Feature | Description |
+| Activity | Description |
 |---|---|
-| 📚 Flashcards | Spaced learning with known/unknown tracking |
-| 🧠 Quiz | Multiple choice to test retention |
-| 🧩 Sentence Builder | Reconstruct Chinese sentences from Russian prompts |
-| 📊 Progress Tracking | Per-topic progress saved to device |
-| ⚡ Real-time Content | Admin adds new content, users see it instantly |
+| 🃏 **Flashcards** | 3D flip animation · swipe left/right · per-device progress tracking |
+| 🧠 **Quiz** | Multiple choice · combo counter · instant feedback |
+| 🔤 **Sentence Builder** | Assemble Chinese words from Russian prompts · animated success state |
+| ✏️ **Stroke Order** | Watch stroke animations · 4 practice rounds (2 guided → 2 from memory) · peek button |
+
+**Other highlights:**
+- 🌐 Full **EN / RU** language switcher — every string, every screen
+- 📊 Progress tracked per device via Supabase — no account needed
+- 🔒 Admin panel — add topics, words (EN + RU translations), sentences from your iPhone
+- ⚡ In-memory caching — fast loads, minimal network calls
+- 🎨 Premium dark design — Spotify-inspired, topic color gradients, glass cards
+
+---
+
+## Screenshots
+
+> Coming soon — TestFlight beta in progress
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Mobile | React Native + Expo |
-| Language | TypeScript |
-| Database | Supabase (PostgreSQL) |
-| Auth | Device ID based access control |
-| Deployment | Expo Go (beta) → TestFlight (coming) |
-
----
-
-## Architecture
 ```
-app/
-├── (tabs)/
-│   ├── index.tsx          # Home — topics, progress, stats
-│   └── admin.tsx          # Admin panel (device-locked, hidden)
-├── topic.tsx              # Activity selector per topic
-├── flashcard.tsx          # Flashcard activity
-├── quiz.tsx               # Quiz activity
-└── sentence.tsx           # Sentence builder activity
-lib/
-├── supabase.ts            # Database client
-├── device.ts              # Device fingerprinting
-└── auth.ts                # Admin access control
-components/
-└── Logo.tsx               # Brand identity
-```
-
----
-
-## Database Schema
-```sql
-topics      — id, title, emoji, color, sort_order
-words       — id, topic_id, chinese, pinyin, english
-sentences   — id, topic_id, russian, chinese_words[], correct_order[]
-progress    — id, device_id, word_id, known, updated_at
+React Native + Expo (file-based routing)
+TypeScript
+Supabase (Postgres + realtime backend)
+expo-linear-gradient
+react-native-gesture-handler
+react-native-reanimated
+react-native-svg
+@jamsch/react-native-hanzi-writer
 ```
 
 ---
 
 ## Getting Started
+
+### Prerequisites
+
+- Node v20 (`nvm use 20`)
+- Expo Go app on your phone
+- iOS or Android device on the same network
+
+### Install
+
 ```bash
-# Clone the repo
 git clone git@github.com:Jerssy-h/clairo.git
-cd clairo
-
-# Install dependencies
+cd clairo/Clairo
 npm install
+```
 
-# Set up environment
-cp .env.example .env
-# Add your Supabase credentials
+### Run
 
-# Start development
-npx expo start
+```bash
+# Same WiFi network
+npx expo start --lan
+
+# Different network
+npx expo start --tunnel
+```
+
+Scan the QR code with Expo Go (Android) or Camera app (iOS).
+
+---
+
+## Database Schema
+
+```sql
+-- Topics (e.g. "Greetings", "Numbers", "University Life")
+topics (id, title, emoji, color, sort_order)
+
+-- Vocabulary words
+words (id, topic_id, chinese, pinyin, english, russian)
+
+-- Sentence builder exercises
+sentences (id, topic_id, russian, chinese_words[], correct_order[])
+
+-- Per-device learning progress
+progress (id, device_id, word_id, known, updated_at)
+```
+
+Progress is tracked by device ID — no sign-up required, works out of the box.
+
+---
+
+## Project Structure
+
+```
+Clairo/
+├── app/
+│   ├── (tabs)/
+│   │   ├── index.tsx         # Home screen
+│   │   └── admin.tsx         # Admin panel (device-locked)
+│   ├── _layout.tsx           # Root layout
+│   ├── topic.tsx             # Activity selector
+│   ├── flashcard.tsx         # Flashcard activity
+│   ├── quiz.tsx              # Quiz activity
+│   ├── sentence.tsx          # Sentence builder
+│   └── stroke.tsx            # Stroke order activity
+├── lib/
+│   ├── supabase.ts           # Supabase client
+│   ├── device.ts             # Device ID helper
+│   ├── auth.ts               # Admin access control
+│   ├── cache.ts              # In-memory cache
+│   ├── i18n.ts               # EN/RU translations
+│   └── LanguageContext.tsx   # Language provider
+└── components/
+    └── Logo.tsx              # Clairo logo
 ```
 
 ---
 
 ## Roadmap
 
-- [x] Flashcard activity
-- [x] Quiz activity
-- [x] Sentence builder activity
-- [x] Progress tracking
-- [x] Admin content management
-- [ ] Stroke order tracing
-- [ ] Tone recognition
-- [ ] TestFlight release
-- [ ] Android support
-- [ ] AI-powered translation activity
+- [ ] 🔥 Daily streak system
+- [ ] 🎬 Onboarding flow for first-time users
+- [ ] 🔤 Multi-character stroke practice (cycle through all chars in a word)
+- [ ] 📱 TestFlight public beta
+- [ ] 📊 Per-activity progress stats
+- [ ] 💬 Word of the day on home screen
 
 ---
 
-## About
+## Contributing
 
-Clairo is being built by **Emir** — a 19 year old from Turkmenistan, incoming Computer Science student at Beijing Institute of Technology. Built out of a real need, for real students.
+This project is open source and built in public. If you're a Russian-speaking student learning Chinese and want to contribute words, sentences, or features — PRs are welcome.
 
-> *"I couldn't find an app that actually helped people like me prepare for China. So I built one."*
+1. Fork the repo
+2. Create your branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'feat: add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
 
 ---
 
-*Currently in closed beta. First public release coming soon.*
+## License
+
+MIT © [Emir Dzhaksybekov](https://github.com/Jerssy-h)
+
+---
+
+<div align="center">
+
+Built with ❤️ in Turkmenistan · Deployed in Beijing
+
+**[⭐ Star this repo](https://github.com/Jerssy-h/clairo)** if you find it useful
+
+</div>
