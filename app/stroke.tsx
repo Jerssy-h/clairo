@@ -248,6 +248,7 @@ export default function StrokeScreen() {
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
+  const [characterIndex, setCharacterIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('watch');
   const [round, setRound] = useState(0);
   const [allDone, setAllDone] = useState(false);
@@ -280,8 +281,9 @@ export default function StrokeScreen() {
     clearCache('topics');
   };
 
-  const goTo = (i: number) => {
+  const goTo = (i: number, nextCharacterIndex = 0) => {
     setIndex(i);
+    setCharacterIndex(nextCharacterIndex);
     setPhase('watch');
     setRound(0);
     setAllDone(false);
@@ -290,9 +292,21 @@ export default function StrokeScreen() {
   const handleRoundComplete = () => {
     const next = round + 1;
     if (next >= TOTAL_ROUNDS) {
-      // Save progress — word mastered after all rounds
-      const wordId = words[index]?.id;
+      const currentWord = words[index];
+      const characters = Array.from(currentWord?.chinese ?? '').filter(Boolean);
+      const hasNextCharacter = characterIndex < characters.length - 1;
+
+      if (hasNextCharacter) {
+        setCharacterIndex((current) => current + 1);
+        setPhase('watch');
+        setRound(0);
+        return;
+      }
+
+      // Save progress — word mastered after all characters and rounds
+      const wordId = currentWord?.id;
       if (wordId) saveProgress(wordId);
+
       // Auto-advance to next word
       if (index < words.length - 1) {
         setTimeout(() => goTo(index + 1), 600);
@@ -345,7 +359,8 @@ export default function StrokeScreen() {
   }
 
   const card = words[index];
-  const char = card.chinese[0];
+  const characters = Array.from(card.chinese).filter(Boolean);
+  const char = characters[characterIndex] ?? characters[0] ?? '';
   const meaning = language === 'ru' ? (card.russian ?? card.english) : card.english;
   const isGuided = round < GUIDED_ROUNDS;
 
@@ -371,7 +386,9 @@ export default function StrokeScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.topicName}>{topicTitle}</Text>
-          <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
+          <Text style={styles.progressText}>
+            {index + 1} / {words.length} • {characterIndex + 1} / {characters.length}
+          </Text>
         </View>
         <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? color + '66' : AppPalette.success + '55' }]}>
           <Text style={styles.phasePillText}>
@@ -393,6 +410,9 @@ export default function StrokeScreen() {
       {/* Word info */}
       <View style={styles.wordInfo}>
         <Text style={styles.chineseText}>{card.chinese}</Text>
+        <Text style={styles.currentCharText}>
+          {language === 'ru' ? 'Пропись иероглифа' : 'Practicing character'} {characterIndex + 1}/{characters.length}: {char}
+        </Text>
         <Text style={[styles.pinyinText, { color }]}>{card.pinyin}</Text>
         <Text style={styles.meaningText}>{meaning}</Text>
       </View>
@@ -498,6 +518,7 @@ const styles = StyleSheet.create({
   wordInfo: { alignItems: 'center', marginBottom: 8, gap: 2 },
   chineseText: { fontSize: 30, fontWeight: '800', color: AppPalette.text, letterSpacing: 2 },
   pinyinText: { fontSize: 16, fontWeight: '600' },
+  currentCharText: { fontSize: 13, color: AppPalette.textSoft, fontWeight: '600' },
   meaningText: { fontSize: 13, color: AppPalette.textMuted, fontWeight: '500' },
   roundRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 8 },
   roundDot: {
