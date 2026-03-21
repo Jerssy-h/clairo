@@ -249,6 +249,9 @@ export default function StrokeScreen() {
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [characterIndex, setCharacterIndex] = useState(0);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewCharacterIndex, setReviewCharacterIndex] = useState(0);
+  const [reviewPass, setReviewPass] = useState(0);
   const [phase, setPhase] = useState<Phase>('watch');
   const [round, setRound] = useState(0);
   const [allDone, setAllDone] = useState(false);
@@ -284,12 +287,50 @@ export default function StrokeScreen() {
   const goTo = (i: number, nextCharacterIndex = 0) => {
     setIndex(i);
     setCharacterIndex(nextCharacterIndex);
+    setReviewMode(false);
+    setReviewCharacterIndex(0);
+    setReviewPass(0);
     setPhase('watch');
     setRound(0);
     setAllDone(false);
   };
 
+  const finishCurrentWord = () => {
+    const currentWord = words[index];
+    const wordId = currentWord?.id;
+    if (wordId) saveProgress(wordId);
+
+    if (index < words.length - 1) {
+      setTimeout(() => goTo(index + 1), 600);
+    } else {
+      setAllDone(true);
+    }
+  };
+
+  const handleReviewComplete = () => {
+    const characters = Array.from(words[index]?.chinese ?? '').filter(Boolean);
+    const hasNextReviewCharacter = reviewCharacterIndex < characters.length - 1;
+
+    if (hasNextReviewCharacter) {
+      setReviewCharacterIndex((current) => current + 1);
+      return;
+    }
+
+    if (reviewPass === 0) {
+      setReviewPass(1);
+      setReviewCharacterIndex(0);
+      return;
+    }
+
+    finishCurrentWord();
+  };
+
   const handleRoundComplete = () => {
+    if (reviewMode) {
+      handleReviewComplete();
+      return;
+    }
+
     const next = round + 1;
     if (next >= TOTAL_ROUNDS) {
       const currentWord = words[index];
@@ -303,16 +344,11 @@ export default function StrokeScreen() {
         return;
       }
 
-      // Save progress — word mastered after all characters and rounds
-      const wordId = currentWord?.id;
-      if (wordId) saveProgress(wordId);
-
-      // Auto-advance to next word
-      if (index < words.length - 1) {
-        setTimeout(() => goTo(index + 1), 600);
-      } else {
-        setAllDone(true);
-      }
+      setReviewMode(true);
+      setReviewPass(0);
+      setReviewCharacterIndex(0);
+      setPhase('practice');
+      setRound(0);
     } else {
       setRound(next);
     }
@@ -360,9 +396,11 @@ export default function StrokeScreen() {
 
   const card = words[index];
   const characters = Array.from(card.chinese).filter(Boolean);
-  const char = characters[characterIndex] ?? characters[0] ?? '';
+  const activeCharacterIndex = reviewMode ? reviewCharacterIndex : characterIndex;
+  const char = characters[activeCharacterIndex] ?? characters[0] ?? '';
   const meaning = language === 'ru' ? (card.russian ?? card.english) : card.english;
-  const isGuided = round < GUIDED_ROUNDS;
+  const isGuided = reviewMode ? reviewPass === 0 : round < GUIDED_ROUNDS;
+  const effectiveRound = reviewMode ? (reviewPass === 0 ? 0 : GUIDED_ROUNDS) : round;
 
   const instructionText =
     phase === 'watch'
@@ -387,7 +425,7 @@ export default function StrokeScreen() {
         <View style={styles.headerCenter}>
           <Text style={styles.topicName}>{topicTitle}</Text>
           <Text style={styles.progressText}>
-            {index + 1} / {words.length} • {characterIndex + 1} / {characters.length}
+            {index + 1} / {words.length} • {activeCharacterIndex + 1} / {characters.length}
           </Text>
         </View>
         <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? color + '66' : AppPalette.success + '55' }]}>
@@ -411,14 +449,16 @@ export default function StrokeScreen() {
       <View style={styles.wordInfo}>
         <Text style={styles.chineseText}>{card.chinese}</Text>
         <Text style={styles.currentCharText}>
-          {language === 'ru' ? 'Пропись иероглифа' : 'Practicing character'} {characterIndex + 1}/{characters.length}: {char}
+          {reviewMode
+            ? (language === 'ru' ? 'Слова подряд' : 'Word review')
+            : (language === 'ru' ? 'Пропись иероглифа' : 'Practicing character')} {activeCharacterIndex + 1}/{characters.length}: {char}
         </Text>
         <Text style={[styles.pinyinText, { color }]}>{card.pinyin}</Text>
         <Text style={styles.meaningText}>{meaning}</Text>
       </View>
 
       {/* Round dots (only during practice) */}
-      {phase === 'practice' && (
+      {phase === 'practice' && !reviewMode && (
         <View style={styles.roundRow}>
           {Array.from({ length: TOTAL_ROUNDS }).map((_, i) => (
             <View
@@ -435,17 +475,25 @@ export default function StrokeScreen() {
 
       {/* Character writer — remounts on char + phase + round change */}
       <CharacterWriter
-        key={`${char}-${index}-${phase}-${round}`}
+        key={`${char}-${index}-${phase}-${round}-${reviewMode ? `review-${reviewPass}-${reviewCharacterIndex}` : 'single'}`}
         char={char}
         color={color}
         phase={phase}
-        round={round}
+        round={effectiveRound}
         language={language}
         onRoundComplete={handleRoundComplete}
       />
 
       {/* Instructions */}
       <Text style={styles.instructions}>{instructionText}</Text>
+
+      {reviewMode && (
+        <Text style={styles.reviewHint}>
+          {reviewPass === 0
+            ? (language === 'ru' ? 'Финальный проход: с подсказкой по всем иероглифам слова.' : 'Final pass: guided review through every character in the word.')
+            : (language === 'ru' ? 'Финальный проход: теперь напиши все иероглифы слова без подсказки.' : 'Final pass: now write every character in the word without hints.')}
+        </Text>
+      )}
 
       {/* Main action button */}
       {phase === 'watch' && (
@@ -557,6 +605,7 @@ const styles = StyleSheet.create({
   peekBtnActive: { opacity: 0.5 },
   peekBtnText: { fontSize: 14, fontWeight: '600' },
   instructions: { textAlign: 'center', color: AppPalette.textFaint, fontSize: 12, marginBottom: 10 },
+  reviewHint: { textAlign: 'center', color: AppPalette.textSoft, fontSize: 12, marginBottom: 12 },
   buttons: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   btnPrimary: { flex: 1, borderRadius: 20, height: 52, alignItems: 'center', justifyContent: 'center' },
   btnPrimaryText: { color: AppPalette.white, fontSize: 15, fontWeight: '700' },
