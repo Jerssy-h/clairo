@@ -53,12 +53,14 @@ function CharacterWriter({
   color,
   phase,
   round,
+  language,
   onRoundComplete,
 }: {
   char: string;
   color: string;
   phase: Phase;
   round: number;
+  language: string;
   onRoundComplete: () => void;
 }) {
   const writer = useHanziWriter({
@@ -214,7 +216,7 @@ function CharacterWriter({
           }
         >
           <Text style={styles.replayBtnText}>
-            {animatorState === 'playing' ? '▶ Воспроизводится…' : '↺ Повтор'}
+            {animatorState === 'playing' ? (language === 'ru' ? '▶ Воспроизводится…' : '▶ Playing…') : (language === 'ru' ? '↺ Повтор' : '↺ Replay')}
           </Text>
         </TouchableOpacity>
       )}
@@ -417,6 +419,7 @@ export default function StrokeScreen() {
         color={color}
         phase={phase}
         round={round}
+        language={language}
         onRoundComplete={handleRoundComplete}
       />
 

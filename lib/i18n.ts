@@ -90,7 +90,7 @@ export const translations = {
     continueLearning: 'ПРОДОЛЖИТЬ ОБУЧЕНИЕ',
     flashcards: 'Карточки',
     quiz: 'Викторина',
-    sentenceBuilder: 'Конструктор предложений',
+    sentenceBuilder: 'Конструктор',
     chooseActivity: 'Выберите активность',
     flipToLearn: 'Переворачивайте карточки для изучения',
     multipleChoice: 'Вопросы с несколькими вариантами',
@@ -124,7 +124,7 @@ export const translations = {
     complete2: 'Завершено!',
     tryAgain: '❌ Попробуйте снова...',
     // Stroke order activity
-    strokeOrder: 'Порядок черт',
+    strokeOrder: 'Пропись',
     strokeDescription: 'Смотрите и практикуйте написание иероглифов',
     strokeWatch: '👁 Смотреть',
     strokeDraw: '✏️ Рисовать',

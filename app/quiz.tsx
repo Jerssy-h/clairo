@@ -1,6 +1,6 @@
 import { clearCache, getCache, setCache } from '@/lib/cache';
-import { useLanguage } from '@/lib/LanguageContext';
 import { getDeviceId } from '@/lib/device';
+import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ type Word = {
   chinese: string;
   pinyin: string;
   english: string;
+  russian?: string;
 };
 
 function shuffle<T>(array: T[]): T[] {
@@ -22,7 +23,7 @@ function shuffle<T>(array: T[]): T[] {
 
 export default function QuizScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { topicId, topicTitle, topicColor } = useLocalSearchParams();
   const color = (topicColor as string) || '#7C3AED';
 
@@ -38,31 +39,18 @@ export default function QuizScreen() {
   const [deviceId, setDeviceId] = useState('');
   const [savingAnswer, setSavingAnswer] = useState(false);
 
-  useEffect(() => {
-    setup();
-  }, []);
+  useEffect(() => { setup(); }, []);
+  useEffect(() => { return () => clearCache('topics'); }, []);
+  useEffect(() => { if (words.length > 0) generateOptions(index); }, [words, index, language]);
 
-  // Refresh Home topic progress when leaving the quiz.
-  useEffect(() => {
-    return () => clearCache('topics');
-  }, []);
-
-  useEffect(() => {
-    if (words.length > 0) generateOptions(index);
-  }, [words, index]);
+  const getMeaning = (word: Word) =>
+    language === 'ru' ? (word.russian ?? word.english) : word.english;
 
   const fetchWords = async () => {
     const cacheKey = `words_${topicId}`;
     const cached = getCache<Word[]>(cacheKey);
-    if (cached) {
-      setWords(shuffle(cached));
-      setLoading(false);
-      return;
-    }
-    const { data } = await supabase
-      .from('words')
-      .select('*')
-      .eq('topic_id', topicId);
+    if (cached) { setWords(shuffle(cached)); setLoading(false); return; }
+    const { data } = await supabase.from('words').select('*').eq('topic_id', topicId);
     setWords(shuffle(data || []));
     setCache(cacheKey, data || []);
     setLoading(false);
@@ -87,9 +75,9 @@ export default function QuizScreen() {
 
   const generateOptions = (currentIndex: number) => {
     const current = words[currentIndex];
-    const others = words.filter((_, i) => i !== currentIndex).map(w => w.english);
+    const others = words.filter((_, i) => i !== currentIndex).map(w => getMeaning(w));
     const shuffledOthers = shuffle(others).slice(0, 3);
-    const allOptions = shuffle([current.english, ...shuffledOthers]);
+    const allOptions = shuffle([getMeaning(current), ...shuffledOthers]);
     setOptions(allOptions);
     setSelected(null);
   };
@@ -97,41 +85,31 @@ export default function QuizScreen() {
   const handleAnswer = (answer: string) => {
     if (selected || savingAnswer) return;
     setSelected(answer);
-    const isCorrect = answer === words[index].english;
+    const correctAnswer = getMeaning(words[index]);
+    const isCorrect = answer === correctAnswer;
 
     setSavingAnswer(true);
-    if (isCorrect) {
-      setCorrect(c => c + 1);
-      setCombo(c => c + 1);
-    } else {
-      setWrong(w => w + 1);
-      setCombo(0);
-    }
+    if (isCorrect) { setCorrect(c => c + 1); setCombo(c => c + 1); }
+    else { setWrong(w => w + 1); setCombo(0); }
 
-    // Persist the result for this word in the same table used by flashcards.
-    saveProgress(words[index].id, isCorrect).finally(() => {
-      setSavingAnswer(false);
-    });
+    saveProgress(words[index].id, isCorrect).finally(() => setSavingAnswer(false));
 
     setTimeout(() => {
-      if (index === words.length - 1) {
-        clearCache('topics');
-        setFinished(true);
-      }
+      if (index === words.length - 1) { clearCache('topics'); setFinished(true); }
       else setIndex(i => i + 1);
     }, 900);
   };
 
   const getOptionStyle = (option: string) => {
     if (!selected) return styles.optionBtn;
-    if (option === words[index].english) return [styles.optionBtn, styles.optionCorrect];
+    if (option === getMeaning(words[index])) return [styles.optionBtn, styles.optionCorrect];
     if (option === selected) return [styles.optionBtn, styles.optionWrong];
     return [styles.optionBtn, styles.optionDim];
   };
 
   const getOptionTextStyle = (option: string) => {
     if (!selected) return styles.optionText;
-    if (option === words[index].english) return [styles.optionText, { color: '#4CAF50' }];
+    if (option === getMeaning(words[index])) return [styles.optionText, { color: '#4CAF50' }];
     if (option === selected) return [styles.optionText, { color: '#FF4444' }];
     return [styles.optionText, { opacity: 0.4 }];
   };
@@ -233,7 +211,9 @@ export default function QuizScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.questionLabel}>What does this mean?</Text>
+        <Text style={styles.questionLabel}>
+          {language === 'ru' ? 'Что это значит?' : 'What does this mean?'}
+        </Text>
         <Text style={styles.cardChinese}>{card.chinese}</Text>
         <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
       </View>
@@ -255,242 +235,81 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D0D',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: '#0D0D0D', paddingHorizontal: 20, paddingTop: 60 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bgChar: {
-    position: 'absolute',
-    fontSize: 320,
-    color: 'rgba(255,255,255,0.04)',
-    fontWeight: '900',
-    top: height * 0.05,
-    alignSelf: 'center',
-    lineHeight: 340,
+    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.04)',
+    fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center',
   },
-  backArrow: {
-    color: '#FFFFFF',
-    fontSize: 18,
-  },
-  headerCenter: {
-    flex: 1,
-  },
-  topicName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  progressText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    marginTop: 2,
-  },
+  backArrow: { color: '#FFFFFF', fontSize: 18 },
+  headerCenter: { flex: 1 },
+  topicName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  progressText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
   comboBadge: {
-    backgroundColor: 'rgba(255,160,0,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,160,0,0.3)',
+    backgroundColor: 'rgba(255,160,0,0.2)', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,160,0,0.3)',
   },
-  comboText: {
-    color: '#FFA000',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  comboText: { color: '#FFA000', fontSize: 13, fontWeight: '700' },
   progressBarBg: {
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 2,
-    marginBottom: 20,
-    overflow: 'hidden',
+    height: 3, backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 2, marginBottom: 20, overflow: 'hidden',
   },
-  progressBarFill: {
-    height: 3,
-    borderRadius: 2,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
+  progressBarFill: { height: 3, borderRadius: 2 },
+  scoreRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   scorePill: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 6,
   },
-  scoreCorrect: {
-    color: '#4CAF50',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  scoreWrong: {
-    color: '#FF4444',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  scoreCorrect: { color: '#4CAF50', fontSize: 14, fontWeight: '700' },
+  scoreWrong: { color: '#FF4444', fontSize: 14, fontWeight: '700' },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    padding: 32,
-    alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 28,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    padding: 32, alignItems: 'center', marginBottom: 20,
   },
-  questionLabel: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    marginBottom: 16,
-    letterSpacing: 0.5,
-  },
-  cardChinese: {
-    fontSize: 72,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  cardPinyin: {
-    fontSize: 22,
-    fontWeight: '600',
-  },
-  optionsContainer: {
-    gap: 10,
-  },
+  questionLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 16, letterSpacing: 0.5 },
+  cardChinese: { fontSize: 72, color: '#FFFFFF', fontWeight: '800', marginBottom: 8, textAlign: 'center' },
+  cardPinyin: { fontSize: 22, fontWeight: '600' },
+  optionsContainer: { gap: 10 },
   optionBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16,
+    padding: 16, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  optionCorrect: {
-    backgroundColor: 'rgba(76,175,80,0.15)',
-    borderColor: '#4CAF50',
-  },
-  optionWrong: {
-    backgroundColor: 'rgba(255,68,68,0.15)',
-    borderColor: '#FF4444',
-  },
-  optionDim: {
-    opacity: 0.4,
-  },
-  optionText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  decorChar: {
-    fontSize: 120,
-    color: 'rgba(255,255,255,0.15)',
-    fontWeight: '900',
-    marginBottom: 24,
-  },
+  optionCorrect: { backgroundColor: 'rgba(76,175,80,0.15)', borderColor: '#4CAF50' },
+  optionWrong: { backgroundColor: 'rgba(255,68,68,0.15)', borderColor: '#FF4444' },
+  optionDim: { opacity: 0.4 },
+  optionText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.15)', fontWeight: '900', marginBottom: 24 },
   emptyCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 24,
-    padding: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 24,
-    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 24, padding: 28,
+    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 24, width: '100%',
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
-  },
-  finishedEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  finishedTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  finishedSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.5)',
-    marginBottom: 30,
-  },
-  resultsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 40,
-  },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, textAlign: 'center' },
+  emptySubtext: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center' },
+  finishedEmoji: { fontSize: 64, marginBottom: 16 },
+  finishedTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
+  finishedSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.5)', marginBottom: 30 },
+  resultsRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
   resultBox: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    minWidth: 90,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16,
+    padding: 20, alignItems: 'center', minWidth: 90,
   },
-  resultNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  resultLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: 4,
-  },
+  resultNumber: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
+  resultLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 20,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20,
+    paddingHorizontal: 32, paddingVertical: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
-  backBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  actionBtn: {
-    borderRadius: 20,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  backBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  actionBtn: { borderRadius: 20, paddingHorizontal: 32, paddingVertical: 16 },
+  actionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });
