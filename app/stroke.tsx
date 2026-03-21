@@ -1,3 +1,4 @@
+import { AppPalette } from '@/constants/theme';
 import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -132,8 +133,8 @@ function CharacterWriter({
   const isGuided = round < GUIDED_ROUNDS;
 
   const borderColor =
-    feedback === 'correct' ? '#4CAF50' :
-    feedback === 'wrong' ? '#FF4444' :
+    feedback === 'correct' ? AppPalette.success :
+    feedback === 'wrong' ? AppPalette.danger :
     'rgba(255,255,255,0.12)';
 
   return (
@@ -143,7 +144,7 @@ function CharacterWriter({
           writer={writer}
           loading={
             <View style={styles.canvasCentered}>
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={AppPalette.white} />
             </View>
           }
           error={
@@ -168,7 +169,7 @@ function CharacterWriter({
             {/* Correctly drawn strokes appear in topic color */}
             <HanziWriter.QuizStrokes color={color} />
             {/* Mistake flash — blue like the official example, clearly visible */}
-            <HanziWriter.QuizMistakeHighlighter color="#60A5FA" strokeDuration={400} />
+            <HanziWriter.QuizMistakeHighlighter color={AppPalette.accentSoft} strokeDuration={400} />
           </HanziWriter.Svg>
         </HanziWriter>
 
@@ -195,11 +196,11 @@ function CharacterWriter({
           <View
             style={[
               styles.feedbackOverlay,
-              { backgroundColor: (feedback === 'correct' ? '#4CAF50' : '#FF4444') + '28' },
+              { backgroundColor: (feedback === 'correct' ? AppPalette.success : AppPalette.danger) + '28' },
             ]}
             pointerEvents="none"
           >
-            <Text style={[styles.feedbackIcon, { color: feedback === 'correct' ? '#4CAF50' : '#FF4444' }]}>
+            <Text style={[styles.feedbackIcon, { color: feedback === 'correct' ? AppPalette.success : AppPalette.danger }]}>
               {feedback === 'correct' ? '✓' : '✕'}
             </Text>
           </View>
@@ -305,15 +306,15 @@ export default function StrokeScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[color, color + '88', '#0D0D0D']} style={styles.center}>
-        <ActivityIndicator color="#FFFFFF" size="large" />
+      <LinearGradient colors={[color, color + '66', AppPalette.bg]} style={styles.center}>
+        <ActivityIndicator color={AppPalette.white} size="large" />
       </LinearGradient>
     );
   }
 
   if (words.length === 0) {
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>笔</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>
@@ -329,7 +330,7 @@ export default function StrokeScreen() {
 
   if (allDone) {
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
         <Text style={styles.doneEmoji}>🏆</Text>
         <Text style={styles.doneTitle}>
           {language === 'ru' ? 'Все иероглифы пройдены!' : 'All characters done!'}
@@ -358,7 +359,7 @@ export default function StrokeScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[color + 'CC', color + '44', '#0D0D0D']}
+        colors={[color + 'CC', color + '36', AppPalette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
       <Text style={styles.bgChar}>{char}</Text>
@@ -372,7 +373,7 @@ export default function StrokeScreen() {
           <Text style={styles.topicName}>{topicTitle}</Text>
           <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
         </View>
-        <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? color + '66' : '#4CAF5066' }]}>
+        <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? color + '66' : AppPalette.success + '55' }]}>
           <Text style={styles.phasePillText}>
             {phase === 'watch'
               ? (language === 'ru' ? '👁 Смотреть' : '👁 Watch')
@@ -472,47 +473,47 @@ export default function StrokeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0D0D', paddingHorizontal: 20, paddingTop: 60 },
+  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bgChar: {
-    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)',
+    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)',
     fontWeight: '900', top: height * 0.1, alignSelf: 'center', lineHeight: 340,
   },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center',
   },
-  backArrow: { color: '#FFFFFF', fontSize: 18 },
+  backArrow: { color: AppPalette.text, fontSize: 18 },
   headerCenter: { flex: 1 },
-  topicName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  progressText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
+  topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
+  progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
   phasePill: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  phasePillText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  phasePillText: { color: AppPalette.white, fontSize: 12, fontWeight: '700' },
   progressBarBg: {
-    height: 3, backgroundColor: 'rgba(255,255,255,0.1)',
+    height: 3, backgroundColor: AppPalette.surfaceSoft,
     borderRadius: 2, marginBottom: 16, overflow: 'hidden',
   },
   progressBarFill: { height: 3, borderRadius: 2 },
   wordInfo: { alignItems: 'center', marginBottom: 8, gap: 2 },
-  chineseText: { fontSize: 30, fontWeight: '800', color: '#FFFFFF', letterSpacing: 2 },
+  chineseText: { fontSize: 30, fontWeight: '800', color: AppPalette.text, letterSpacing: 2 },
   pinyinText: { fontSize: 16, fontWeight: '600' },
-  meaningText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '500' },
+  meaningText: { fontSize: 13, color: AppPalette.textMuted, fontWeight: '500' },
   roundRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 8 },
   roundDot: {
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: AppPalette.borderStrong,
+    borderWidth: 1, borderColor: AppPalette.border,
   },
   writerSection: { alignItems: 'center', width: '100%', marginBottom: 6 },
   canvasWrapper: {
     width: 300, height: 300, borderRadius: 24, borderWidth: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden',
+    backgroundColor: AppPalette.bgElevated, overflow: 'hidden',
     position: 'relative', marginBottom: 10, alignSelf: 'center',
   },
   writer: { width: 300, height: 300, alignSelf: 'center' },
   canvasCentered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  canvasSubText: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
+  canvasSubText: { color: AppPalette.textMuted, fontSize: 13 },
   peekOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 5,
@@ -523,41 +524,41 @@ const styles = StyleSheet.create({
   },
   feedbackIcon: { fontSize: 60, fontWeight: '900' },
   replayBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16,
+    backgroundColor: AppPalette.surface, borderRadius: 16,
     paddingHorizontal: 20, paddingVertical: 8,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1, borderColor: AppPalette.border,
   },
-  replayBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
+  replayBtnText: { color: AppPalette.textSoft, fontSize: 14, fontWeight: '600' },
   peekBtn: {
     borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8,
-    borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1, backgroundColor: AppPalette.bgElevated,
   },
   peekBtnActive: { opacity: 0.5 },
   peekBtnText: { fontSize: 14, fontWeight: '600' },
-  instructions: { textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 10 },
+  instructions: { textAlign: 'center', color: AppPalette.textFaint, fontSize: 12, marginBottom: 10 },
   buttons: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   btnPrimary: { flex: 1, borderRadius: 20, height: 52, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  btnPrimaryText: { color: AppPalette.white, fontSize: 15, fontWeight: '700' },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  navBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)' },
+  navBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: AppPalette.surface },
   navBtnDisabled: { opacity: 0.3 },
-  navBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  navBtnText: { color: AppPalette.text, fontSize: 13, fontWeight: '600' },
   navDots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
-  dotsMore: { color: 'rgba(255,255,255,0.3)', fontSize: 12 },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.15)', fontWeight: '900', marginBottom: 24 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: AppPalette.borderStrong },
+  dotsMore: { color: AppPalette.textFaint, fontSize: 12 },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
   emptyCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 24, padding: 28,
-    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28,
+    alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border,
     marginBottom: 24, width: '100%',
   },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, textAlign: 'center' },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20,
+    backgroundColor: AppPalette.surfaceSoft, borderRadius: 20,
     paddingHorizontal: 32, paddingVertical: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1, borderColor: AppPalette.borderStrong,
   },
-  backBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
   doneEmoji: { fontSize: 72, marginBottom: 16 },
-  doneTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 32, textAlign: 'center' },
+  doneTitle: { fontSize: 24, fontWeight: '800', color: AppPalette.text, marginBottom: 32, textAlign: 'center' },
 });

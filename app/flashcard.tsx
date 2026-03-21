@@ -1,3 +1,4 @@
+import { AppPalette } from '@/constants/theme';
 import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -182,15 +183,15 @@ export default function FlashcardScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[color, color + '88', '#0D0D0D']} style={styles.center}>
-        <ActivityIndicator color="#FFFFFF" size="large" />
+      <LinearGradient colors={[color, color + '66', AppPalette.bg]} style={styles.center}>
+        <ActivityIndicator color={AppPalette.white} size="large" />
       </LinearGradient>
     );
   }
 
   if (words.length === 0) {
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>学</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>{t.noWordsInTopic}</Text>
@@ -207,7 +208,7 @@ export default function FlashcardScreen() {
     const total = known + unknown;
     const percentage = total > 0 ? Math.round((known / total) * 100) : 0;
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
@@ -243,7 +244,7 @@ export default function FlashcardScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[color + 'CC', color + '44', '#0D0D0D']}
+        colors={[color + 'CC', color + '38', AppPalette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
@@ -360,7 +361,7 @@ export default function FlashcardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: AppPalette.bg,
     paddingHorizontal: 20,
     paddingTop: 60,
   },
@@ -373,7 +374,7 @@ const styles = StyleSheet.create({
   bgChar: {
     position: 'absolute',
     fontSize: 320,
-    color: 'rgba(255,255,255,0.04)',
+    color: 'rgba(255,255,255,0.05)',
     fontWeight: '900',
     top: height * 0.1,
     alignSelf: 'center',
@@ -391,41 +392,41 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: AppPalette.surfaceSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
-    color: '#FFFFFF',
+    color: AppPalette.text,
     fontSize: 18,
   },
   headerCenter: { flex: 1 },
   topicName: {
-    color: '#FFFFFF',
+    color: AppPalette.text,
     fontSize: 16,
     fontWeight: '700',
   },
   progressText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: AppPalette.textMuted,
     fontSize: 12,
     marginTop: 2,
   },
   scoreCircle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: AppPalette.surface,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     gap: 4,
   },
   scoreText: {
-    color: '#FFFFFF',
+    color: AppPalette.text,
     fontSize: 15,
     fontWeight: '700',
   },
   scoreLabel: {
-    color: '#4CAF50',
+    color: AppPalette.success,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
   // Progress bar
   progressBarBg: {
     height: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: AppPalette.surfaceSoft,
     borderRadius: 2,
     marginBottom: 28,
     overflow: 'hidden',
@@ -454,10 +455,10 @@ const styles = StyleSheet.create({
   cardFace: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: AppPalette.bgElevated,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: AppPalette.border,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -465,21 +466,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardBack: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: AppPalette.surface,
   },
   cardLabel: {
     position: 'absolute',
     top: 20,
     left: 24,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.25)',
+    color: AppPalette.textFaint,
     fontWeight: '600',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   cardChinese: {
     fontSize: 80,
-    color: '#FFFFFF',
+    color: AppPalette.text,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -490,30 +491,30 @@ const styles = StyleSheet.create({
   },
   tapHint: {
     marginTop: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: AppPalette.surface,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   tapHintText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: AppPalette.textMuted,
     fontSize: 13,
   },
   dividerLine: {
     width: 40,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: AppPalette.borderStrong,
     marginVertical: 4,
   },
   cardRussian: {
     fontSize: 30,
-    color: '#FFFFFF',
+    color: AppPalette.text,
     fontWeight: '700',
     textAlign: 'center',
   },
   cardEnglish: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.45)',
+    color: AppPalette.textMuted,
     fontWeight: '500',
     textAlign: 'center',
     marginTop: 2,
@@ -527,13 +528,13 @@ const styles = StyleSheet.create({
   },
   btnAgain: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: AppPalette.bgElevated,
     borderRadius: 28,
     height: 76,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: AppPalette.border,
     gap: 2,
   },
   btnKnow: {
@@ -550,48 +551,48 @@ const styles = StyleSheet.create({
   btnIcon: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: AppPalette.text,
   },
   btnIconDisabled: {
-    color: 'rgba(255,255,255,0.4)',
+    color: AppPalette.textMuted,
   },
   btnLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: AppPalette.white,
     letterSpacing: 0.3,
   },
   btnLabelDisabled: {
-    color: 'rgba(255,255,255,0.3)',
+    color: AppPalette.textFaint,
   },
 
   // Empty / finished states
   decorChar: {
     fontSize: 120,
-    color: 'rgba(255,255,255,0.15)',
+    color: 'rgba(255,255,255,0.16)',
     fontWeight: '900',
     marginBottom: 24,
   },
   emptyCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: AppPalette.bgElevated,
     borderRadius: 24,
     padding: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: AppPalette.border,
     marginBottom: 24,
     width: '100%',
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: AppPalette.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: AppPalette.textMuted,
     textAlign: 'center',
   },
   finishedEmoji: {
@@ -601,12 +602,12 @@ const styles = StyleSheet.create({
   finishedTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: AppPalette.text,
     marginBottom: 8,
   },
   finishedSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.5)',
+    color: AppPalette.textMuted,
     marginBottom: 30,
   },
   resultsRow: {
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   resultBox: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: AppPalette.surface,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -624,23 +625,23 @@ const styles = StyleSheet.create({
   resultNumber: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: AppPalette.text,
   },
   resultLabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: AppPalette.textMuted,
     marginTop: 4,
   },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: AppPalette.surfaceSoft,
     borderRadius: 20,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: AppPalette.borderStrong,
   },
   backBtnText: {
-    color: '#FFFFFF',
+    color: AppPalette.text,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -650,7 +651,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   actionBtnText: {
-    color: '#FFFFFF',
+    color: AppPalette.white,
     fontSize: 16,
     fontWeight: '700',
   },

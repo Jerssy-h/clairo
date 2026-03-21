@@ -1,3 +1,4 @@
+import { AppPalette } from '@/constants/theme';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +15,23 @@ import {
 
 const { width, height } = Dimensions.get('window');
 const CARD_SIZE = (width - 20 * 2 - 12) / 2;
+
+const blendHex = (hex: string, target: string, amount: number) => {
+  const normalize = (value: string) => {
+    const raw = value.replace('#', '');
+    return raw.length === 3 ? raw.split('').map((char) => char + char).join('') : raw;
+  };
+
+  const source = normalize(hex);
+  const blend = normalize(target);
+  const mix = (start: number, end: number) => Math.round(start + (end - start) * amount);
+
+  const r = mix(parseInt(source.slice(0, 2), 16), parseInt(blend.slice(0, 2), 16));
+  const g = mix(parseInt(source.slice(2, 4), 16), parseInt(blend.slice(2, 4), 16));
+  const b = mix(parseInt(source.slice(4, 6), 16), parseInt(blend.slice(4, 6), 16));
+
+  return `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+};
 
 export default function TopicScreen() {
   const router = useRouter();
@@ -44,7 +62,7 @@ export default function TopicScreen() {
       title: t.flashcards,
       subtitle: language === 'ru' ? 'Узнавание' : 'Recognition',
       icon: '卡',
-      color: '#3B4FD4',
+      color: '#384E8F',
       minWords: 1,
     },
     {
@@ -52,7 +70,7 @@ export default function TopicScreen() {
       title: t.quiz,
       subtitle: language === 'ru' ? 'Проверка' : 'Testing',
       icon: '测',
-      color: '#2D3BAA',
+      color: '#433E7B',
       minWords: 4,
     },
     {
@@ -60,7 +78,7 @@ export default function TopicScreen() {
       title: t.sentenceBuilder,
       subtitle: language === 'ru' ? 'Составление' : 'Production',
       icon: '句',
-      color: '#166534',
+      color: '#245C57',
       minWords: 1,
     },
     {
@@ -68,7 +86,7 @@ export default function TopicScreen() {
       title: language === 'ru' ? 'Пропись' : 'Strokes',
       subtitle: language === 'ru' ? 'Написание' : 'Writing',
       icon: '笔',
-      color: '#92400E',
+      color: '#7A5632',
       minWords: 1,
     },
   ];
@@ -88,7 +106,7 @@ export default function TopicScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[color + 'CC', color + '33', '#0D0D0D', '#0D0D0D']}
+        colors={[color + 'CC', color + '30', AppPalette.bg, AppPalette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
 
@@ -107,7 +125,7 @@ export default function TopicScreen() {
           <ActivityIndicator color="rgba(255,255,255,0.4)" size="small" />
         ) : (
           <View style={styles.heroMeta}>
-            <View style={[styles.metaBadge, { backgroundColor: color + '44' }]}>
+            <View style={[styles.metaBadge, { backgroundColor: color + '33' }]}>
               <Text style={styles.metaBadgeText}>{wordCount} {t.words}</Text>
             </View>
           </View>
@@ -121,6 +139,8 @@ export default function TopicScreen() {
       <View style={styles.grid}>
         {activities.map((activity) => {
           const locked = wordCount < activity.minWords;
+          const activityBase = blendHex(activity.color, AppPalette.bgElevated, 0.18);
+          const activityShade = blendHex(activity.color, AppPalette.bg, 0.42);
           return (
             <TouchableOpacity
               key={activity.id}
@@ -130,7 +150,7 @@ export default function TopicScreen() {
             >
               {/* Background gradient */}
               <LinearGradient
-                colors={[activity.color + 'EE', activity.color + '88']}
+                colors={[activityBase, activityShade]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFillObject}
@@ -164,14 +184,14 @@ export default function TopicScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: AppPalette.bg,
     paddingHorizontal: 20,
     paddingTop: 60,
   },
   bgChar: {
     position: 'absolute',
     fontSize: 300,
-    color: 'rgba(255,255,255,0.04)',
+    color: 'rgba(255,255,255,0.05)',
     fontWeight: '900',
     top: height * 0.04,
     alignSelf: 'center',
@@ -179,23 +199,23 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: AppPalette.surfaceSoft,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 28,
   },
-  backArrow: { color: '#FFFFFF', fontSize: 18 },
+  backArrow: { color: AppPalette.text, fontSize: 18 },
 
   hero: { marginBottom: 32 },
-  heroTitle: { fontSize: 34, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1, marginBottom: 10 },
+  heroTitle: { fontSize: 34, fontWeight: '800', color: AppPalette.text, letterSpacing: -1, marginBottom: 10 },
   heroMeta: { flexDirection: 'row' },
   metaBadge: {
     borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1, borderColor: AppPalette.border,
   },
-  metaBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
+  metaBadgeText: { color: AppPalette.textSoft, fontSize: 13, fontWeight: '600' },
 
   sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.3)',
+    fontSize: 11, fontWeight: '700', color: AppPalette.textFaint,
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
   },
 
@@ -217,7 +237,7 @@ const styles = StyleSheet.create({
     bottom: -16,
     right: -8,
     fontSize: 96,
-    color: 'rgba(255,255,255,0.1)',
+    color: 'rgba(255,255,255,0.12)',
     fontWeight: '900',
     lineHeight: 110,
   },
@@ -230,25 +250,25 @@ const styles = StyleSheet.create({
   cardIcon: {
     fontSize: 40,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: AppPalette.text,
     marginBottom: 4,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: AppPalette.text,
     letterSpacing: -0.3,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: AppPalette.textSoft,
     fontWeight: '500',
   },
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(11,16,32,0.34)',
   },
   lockIcon: { fontSize: 24 },
 });

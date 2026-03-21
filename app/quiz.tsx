@@ -1,3 +1,4 @@
+import { AppPalette } from '@/constants/theme';
 import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -224,22 +225,22 @@ export default function QuizScreen() {
 
   const getOptionTextStyle = (option: string) => {
     if (!selected) return styles.optionText;
-    if (option === getMeaning(words[index])) return [styles.optionText, { color: '#4CAF50' }];
-    if (option === selected) return [styles.optionText, { color: '#FF4444' }];
+    if (option === getMeaning(words[index])) return [styles.optionText, { color: AppPalette.success }];
+    if (option === selected) return [styles.optionText, { color: AppPalette.danger }];
     return [styles.optionText, { opacity: 0.4 }];
   };
 
   if (loading) {
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
-        <ActivityIndicator color="#FFFFFF" size="large" />
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+        <ActivityIndicator color={AppPalette.white} size="large" />
       </LinearGradient>
     );
   }
 
   if (words.length < 4) {
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>问</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>{t.need4Words}</Text>
@@ -256,7 +257,7 @@ export default function QuizScreen() {
     const total = correct + wrong;
     const percentage = Math.round((correct / total) * 100);
     return (
-      <LinearGradient colors={[color, '#0D0D0D']} style={styles.center}>
+      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
@@ -292,7 +293,7 @@ export default function QuizScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[color + 'CC', color + '44', '#0D0D0D']}
+        colors={[color + 'CC', color + '36', AppPalette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
@@ -375,82 +376,82 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0D0D', paddingHorizontal: 20, paddingTop: 60 },
+  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bgChar: {
-    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.04)',
+    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)',
     fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340,
   },
   headerBlock: { marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center',
   },
-  backArrow: { color: '#FFFFFF', fontSize: 18 },
+  backArrow: { color: AppPalette.text, fontSize: 18 },
   headerCenter: { flex: 1 },
-  topicName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  progressText: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
+  topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
+  progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
   comboBadge: {
-    backgroundColor: 'rgba(255,160,0,0.2)', borderRadius: 20,
+    backgroundColor: 'rgba(255,201,120,0.18)', borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(255,160,0,0.3)',
+    borderWidth: 1, borderColor: 'rgba(255,201,120,0.28)',
   },
-  comboText: { color: '#FFA000', fontSize: 13, fontWeight: '700' },
+  comboText: { color: AppPalette.warning, fontSize: 13, fontWeight: '700' },
   progressBarBg: {
-    height: 3, backgroundColor: 'rgba(255,255,255,0.1)',
+    height: 3, backgroundColor: AppPalette.surfaceSoft,
     borderRadius: 2, marginBottom: 20, overflow: 'hidden',
   },
   progressBarFill: { height: 3, borderRadius: 2 },
   scoreRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   scorePill: {
-    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20,
+    backgroundColor: AppPalette.surface, borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 6,
   },
-  scoreCorrect: { color: '#4CAF50', fontSize: 14, fontWeight: '700' },
-  scoreWrong: { color: '#FF4444', fontSize: 14, fontWeight: '700' },
+  scoreCorrect: { color: AppPalette.success, fontSize: 14, fontWeight: '700' },
+  scoreWrong: { color: AppPalette.danger, fontSize: 14, fontWeight: '700' },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 28,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: AppPalette.bgElevated, borderRadius: 28,
+    borderWidth: 1, borderColor: AppPalette.border,
     padding: 32, alignItems: 'center', marginBottom: 20,
   },
-  questionLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 16, letterSpacing: 0.5 },
-  cardChinese: { fontSize: 72, color: '#FFFFFF', fontWeight: '800', marginBottom: 8, textAlign: 'center' },
+  questionLabel: { color: AppPalette.textMuted, fontSize: 13, marginBottom: 16, letterSpacing: 0.5 },
+  cardChinese: { fontSize: 72, color: AppPalette.text, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
   cardPinyin: { fontSize: 22, fontWeight: '600' },
   optionsContainer: { gap: 10 },
   optionBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16,
+    backgroundColor: AppPalette.surface, borderRadius: 16,
     padding: 16, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1, borderColor: AppPalette.border,
   },
-  optionCorrect: { backgroundColor: 'rgba(76,175,80,0.15)', borderColor: '#4CAF50' },
-  optionWrong: { backgroundColor: 'rgba(255,68,68,0.15)', borderColor: '#FF4444' },
+  optionCorrect: { backgroundColor: 'rgba(126,224,161,0.16)', borderColor: AppPalette.success },
+  optionWrong: { backgroundColor: 'rgba(255,142,158,0.14)', borderColor: AppPalette.danger },
   optionDim: { opacity: 0.4 },
-  optionText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.15)', fontWeight: '900', marginBottom: 24 },
+  optionText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
   emptyCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 24, padding: 28,
-    alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28,
+    alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border,
     marginBottom: 24, width: '100%',
   },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, textAlign: 'center' },
-  emptySubtext: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center' },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
+  emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },
   finishedEmoji: { fontSize: 64, marginBottom: 16 },
-  finishedTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
-  finishedSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.5)', marginBottom: 30 },
+  finishedTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 8 },
+  finishedSubtitle: { fontSize: 16, color: AppPalette.textMuted, marginBottom: 30 },
   resultsRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
   resultBox: {
-    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16,
+    backgroundColor: AppPalette.surface, borderRadius: 16,
     padding: 20, alignItems: 'center', minWidth: 90,
   },
-  resultNumber: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
-  resultLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
+  resultNumber: { fontSize: 28, fontWeight: '800', color: AppPalette.text, },
+  resultLabel: { fontSize: 12, color: AppPalette.textMuted, marginTop: 4 },
   backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20,
+    backgroundColor: AppPalette.surfaceSoft, borderRadius: 20,
     paddingHorizontal: 32, paddingVertical: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1, borderColor: AppPalette.borderStrong,
   },
-  backBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
   actionBtn: { borderRadius: 20, paddingHorizontal: 32, paddingVertical: 16 },
-  actionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  actionBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },
 });

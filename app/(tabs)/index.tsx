@@ -1,4 +1,5 @@
 import Logo from '@/components/Logo';
+import { AppPalette } from '@/constants/theme';
 import { isAdmin } from '@/lib/auth';
 import { getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
@@ -39,6 +40,23 @@ const getGreetingChinese = () => {
 };
 
 const TOPIC_CHARS = ['你', '我', '好', '学', '中', '文', '说', '话', '读', '写'];
+
+const blendHex = (hex: string, target: string, amount: number) => {
+  const normalize = (value: string) => {
+    const raw = value.replace('#', '');
+    return raw.length === 3 ? raw.split('').map((char) => char + char).join('') : raw;
+  };
+
+  const source = normalize(hex);
+  const blend = normalize(target);
+  const mix = (start: number, end: number) => Math.round(start + (end - start) * amount);
+
+  const r = mix(parseInt(source.slice(0, 2), 16), parseInt(blend.slice(0, 2), 16));
+  const g = mix(parseInt(source.slice(2, 4), 16), parseInt(blend.slice(2, 4), 16));
+  const b = mix(parseInt(source.slice(4, 6), 16), parseInt(blend.slice(4, 6), 16));
+
+  return `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+};
 
 
 // Track if we already showed splash this session
@@ -214,7 +232,7 @@ export default function HomeScreen() {
                 <Text style={styles.progressPercent}>{overallProgress}%</Text>
                 <View style={styles.progressBarBg}>
                   <LinearGradient
-                    colors={['#4F46E5', '#7C3AED']}
+                    colors={[AppPalette.tintStrong, AppPalette.accent]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={[styles.progressBarFill, { width: `${overallProgress}%` }]}
@@ -250,6 +268,8 @@ export default function HomeScreen() {
                 : 0;
               const char = TOPIC_CHARS[i % TOPIC_CHARS.length];
               const remaining = topic.word_count - topic.known_count;
+              const topicBase = blendHex(topic.color, AppPalette.bgElevated, 0.55);
+              const topicShade = blendHex(topic.color, AppPalette.bg, 0.75);
               return (
                 <Animated.View
                   key={topic.id}
@@ -275,9 +295,9 @@ export default function HomeScreen() {
                       params: { topicId: topic.id, topicTitle: topic.title, topicColor: topic.color, topicEmoji: topic.emoji },
                     })}
                     activeOpacity={0.85}
-                  >
+                    >
                     <LinearGradient
-                      colors={[topic.color, topic.color + 'CC']}
+                      colors={[topicBase, topicShade]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={StyleSheet.absoluteFillObject}
@@ -350,7 +370,10 @@ export default function HomeScreen() {
                 {/* Mini progress bar */}
                 <View style={styles.ctaBarBg}>
                   <LinearGradient
-                    colors={[firstTopic.color, firstTopic.color + 'AA']}
+                    colors={[
+                      blendHex(firstTopic.color, AppPalette.bgElevated, 0.55),
+                      blendHex(firstTopic.color, AppPalette.bg, 0.76),
+                    ]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={[styles.ctaBarFill, { width: `${firstProgress}%` }]}
@@ -380,12 +403,12 @@ export default function HomeScreen() {
             <Text style={styles.modalSub}>{totalKnown} {t.wordsMasteredSoFar}</Text>
             {loadingLearned ? (
               <View style={{ paddingVertical: 40 }}>
-                <Text style={{ color: '#555', textAlign: 'center' }}>{t.loading}</Text>
+                <Text style={{ color: AppPalette.textMuted, textAlign: 'center' }}>{t.loading}</Text>
               </View>
             ) : learnedWords.length === 0 ? (
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                <Text style={{ color: '#555', fontSize: 15 }}>{t.noWordsYet}</Text>
-                <Text style={{ color: '#444', fontSize: 13, marginTop: 4 }}>{t.completeFlashcards}</Text>
+                <Text style={{ color: AppPalette.textMuted, fontSize: 15 }}>{t.noWordsYet}</Text>
+                <Text style={{ color: AppPalette.textFaint, fontSize: 13, marginTop: 4 }}>{t.completeFlashcards}</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -411,18 +434,22 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0D0D' },
+  container: { flex: 1, backgroundColor: AppPalette.bg },
   scroll: { paddingTop: 52, paddingBottom: 48 },
 
   // Header
   headerCard: {
     marginHorizontal: 20,
     marginBottom: 28,
-    backgroundColor: '#131313',
+    backgroundColor: AppPalette.bgElevated,
     borderRadius: 24,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1C1C1C',
+    borderColor: AppPalette.border,
+    shadowColor: '#050814',
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatarWrapper: {
@@ -433,48 +460,48 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: AppPalette.text,
     letterSpacing: -0.3,
     marginBottom: 2,
   },
   greetingRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  greetingChinese: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
-  greetingEn: { fontSize: 12, color: '#444' },
+  greetingChinese: { fontSize: 13, fontWeight: '700', color: AppPalette.text },
+  greetingEn: { fontSize: 12, color: AppPalette.textMuted },
 
   langBtn: {
-    backgroundColor: '#1C1C1C',
+    backgroundColor: AppPalette.surfaceSoft,
     borderRadius: 14,
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#282828',
+    borderColor: AppPalette.borderStrong,
   },
-  langBtnLabel: { fontSize: 11, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1 },
+  langBtnLabel: { fontSize: 11, fontWeight: '800', color: AppPalette.text, letterSpacing: 1 },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1C1C1C',
+    backgroundColor: AppPalette.surfaceSoft,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
     gap: 5,
     borderWidth: 1,
-    borderColor: '#282828',
+    borderColor: AppPalette.borderStrong,
     position: 'relative',
   },
-  flameOuter: { width: 10, height: 13, borderRadius: 5, backgroundColor: '#F97316' },
-  flameInner: { position: 'absolute', left: 12, bottom: 8, width: 5, height: 7, borderRadius: 3, backgroundColor: '#FCD34D' },
-  streakText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  flameOuter: { width: 10, height: 13, borderRadius: 5, backgroundColor: AppPalette.warning },
+  flameInner: { position: 'absolute', left: 12, bottom: 8, width: 5, height: 7, borderRadius: 3, backgroundColor: AppPalette.accentSoft },
+  streakText: { fontSize: 12, fontWeight: '700', color: AppPalette.text },
 
-  divider: { height: 1, backgroundColor: '#1C1C1C', marginVertical: 14 },
+  divider: { height: 1, backgroundColor: AppPalette.border, marginVertical: 14 },
 
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   progressLeft: { flex: 1 },
-  progressLabel: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
-  progressSub: { fontSize: 11, color: '#444', marginTop: 2 },
+  progressLabel: { fontSize: 13, fontWeight: '700', color: AppPalette.text },
+  progressSub: { fontSize: 11, color: AppPalette.textMuted, marginTop: 2 },
   progressRight: { alignItems: 'flex-end', gap: 6 },
-  progressPercent: { fontSize: 20, fontWeight: '800', color: '#4F46E5' },
-  progressBarBg: { width: 110, height: 5, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden' },
+  progressPercent: { fontSize: 20, fontWeight: '800', color: AppPalette.accentSoft },
+  progressBarBg: { width: 110, height: 5, backgroundColor: AppPalette.surfaceSoft, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: 5, borderRadius: 3 },
 
   // Section
@@ -485,26 +512,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 12,
   },
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
-  sectionCount: { fontSize: 13, color: '#333' },
+  sectionTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text },
+  sectionCount: { fontSize: 13, color: AppPalette.textFaint },
 
   // Topic cards
   topicsGrid: { paddingHorizontal: 20, gap: 12 },
   topicCard: { borderRadius: 24, overflow: 'hidden', height: 164 },
   bgChar: {
     position: 'absolute', right: -8, bottom: -16,
-    fontSize: 148, color: 'rgba(255,255,255,0.09)',
+    fontSize: 148, color: 'rgba(255,255,255,0.12)',
     fontWeight: '900', lineHeight: 168,
   },
   topicContent: { flex: 1, padding: 18, justifyContent: 'space-between' },
   topicTopRow: { flexDirection: 'row', justifyContent: 'space-between' },
   topicWordBadge: {
-    backgroundColor: 'rgba(0,0,0,0.22)',
+    backgroundColor: 'rgba(11,16,32,0.22)',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  topicWordBadgeText: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600' },
+  topicWordBadgeText: { color: 'rgba(255,255,255,0.82)', fontSize: 11, fontWeight: '600' },
   topicPctBadge: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 10,
@@ -513,53 +540,53 @@ const styles = StyleSheet.create({
   },
   topicPctText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   topicTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
-  topicBarBg: { height: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' },
+  topicBarBg: { height: 3, backgroundColor: AppPalette.topicTrack, borderRadius: 2, overflow: 'hidden' },
   topicBarFill: { height: 3, backgroundColor: '#FFFFFF', borderRadius: 2 },
   topicBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   topicRemaining: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
   topicLastStudied: { fontSize: 11, color: 'rgba(255,255,255,0.3)' },
-  skeletonCard: { height: 164, borderRadius: 24, backgroundColor: '#131313' },
+  skeletonCard: { height: 164, borderRadius: 24, backgroundColor: AppPalette.bgElevated },
 
   // CTA — shows where you left off
   ctaBtn: {
     marginHorizontal: 20,
     marginTop: 14,
-    backgroundColor: '#131313',
+    backgroundColor: AppPalette.bgElevated,
     borderRadius: 20,
     padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     borderWidth: 1,
-    borderColor: '#1C1C1C',
+    borderColor: AppPalette.border,
   },
   ctaLeft: { flex: 1, gap: 4 },
-  ctaLabel: { fontSize: 11, fontWeight: '700', color: '#444', letterSpacing: 0.5, textTransform: 'uppercase' },
-  ctaTopicName: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
-  ctaBarBg: { height: 3, backgroundColor: '#1C1C1C', borderRadius: 2, overflow: 'hidden', marginTop: 4 },
+  ctaLabel: { fontSize: 11, fontWeight: '700', color: AppPalette.textMuted, letterSpacing: 0.5, textTransform: 'uppercase' },
+  ctaTopicName: { fontSize: 15, fontWeight: '800', color: AppPalette.text, letterSpacing: -0.3 },
+  ctaBarBg: { height: 3, backgroundColor: AppPalette.surfaceSoft, borderRadius: 2, overflow: 'hidden', marginTop: 4 },
   ctaBarFill: { height: 3, borderRadius: 2 },
   ctaRight: { alignItems: 'center', gap: 4 },
-  ctaPct: { fontSize: 13, fontWeight: '800', color: '#4F46E5' },
-  ctaArrow: { fontSize: 16, color: '#333' },
+  ctaPct: { fontSize: 13, fontWeight: '800', color: AppPalette.accentSoft },
+  ctaArrow: { fontSize: 16, color: AppPalette.textMuted },
 
   // Empty
   emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyChar: { fontSize: 80, color: '#1A1A1A', fontWeight: '900', marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
-  emptySubtext: { fontSize: 14, color: '#444', textAlign: 'center', paddingHorizontal: 40 },
+  emptyChar: { fontSize: 80, color: AppPalette.surfaceSoft, fontWeight: '900', marginBottom: 16 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: AppPalette.text, marginBottom: 8 },
+  emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center', paddingHorizontal: 40 },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#131313', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 48, maxHeight: '80%' },
+  modalOverlay: { flex: 1, backgroundColor: AppPalette.overlay, justifyContent: 'flex-end' },
+  modal: { backgroundColor: AppPalette.bgElevated, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 48, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFF' },
-  modalClose: { fontSize: 18, color: '#444', padding: 4 },
-  modalSub: { fontSize: 13, color: '#444', marginBottom: 20 },
-  learnedRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0D0D0D', borderRadius: 12, padding: 14, marginBottom: 8, gap: 12 },
-  learnedChinese: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', minWidth: 48, maxWidth: 80, textAlign: 'center' },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: AppPalette.text },
+  modalClose: { fontSize: 18, color: AppPalette.textMuted, padding: 4 },
+  modalSub: { fontSize: 13, color: AppPalette.textMuted, marginBottom: 20 },
+  learnedRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: AppPalette.surface, borderRadius: 12, padding: 14, marginBottom: 8, gap: 12 },
+  learnedChinese: { fontSize: 22, fontWeight: '800', color: AppPalette.text, minWidth: 48, maxWidth: 80, textAlign: 'center' },
   learnedInfo: { flex: 1 },
-  learnedEnglish: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
-  learnedPinyin: { fontSize: 12, color: '#4F46E5', marginTop: 2 },
-  learnedBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center' },
-  learnedBadgeText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  learnedEnglish: { fontSize: 15, fontWeight: '600', color: AppPalette.text },
+  learnedPinyin: { fontSize: 12, color: AppPalette.accentSoft, marginTop: 2 },
+  learnedBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: AppPalette.tintStrong, alignItems: 'center', justifyContent: 'center' },
+  learnedBadgeText: { color: AppPalette.white, fontSize: 13, fontWeight: '800' },
 });
