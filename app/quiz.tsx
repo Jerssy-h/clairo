@@ -4,8 +4,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { height } = Dimensions.get('window');
 
@@ -38,10 +38,125 @@ export default function QuizScreen() {
   const [combo, setCombo] = useState(0);
   const [deviceId, setDeviceId] = useState('');
   const [savingAnswer, setSavingAnswer] = useState(false);
+  const introPlayed = useRef(false);
+  const lastAnimatedKey = useRef('');
+  const introHeaderOpacity = useRef(new Animated.Value(0)).current;
+  const introHeaderTranslateY = useRef(new Animated.Value(18)).current;
+  const introCardOpacity = useRef(new Animated.Value(0)).current;
+  const introCardTranslateX = useRef(new Animated.Value(36)).current;
+  const introCardScale = useRef(new Animated.Value(0.96)).current;
+  const introOptions = useRef(
+    Array.from({ length: 4 }, () => ({
+      opacity: new Animated.Value(0),
+      translateX: new Animated.Value(44),
+    }))
+  ).current;
 
   useEffect(() => { setup(); }, []);
   useEffect(() => { return () => clearCache('topics'); }, []);
   useEffect(() => { if (words.length > 0) generateOptions(index); }, [words, index, language]);
+  useEffect(() => {
+    if (loading || words.length < 4 || options.length === 0) return;
+
+    const animationKey = `${index}-${options.join('|')}`;
+    if (lastAnimatedKey.current === animationKey) return;
+    lastAnimatedKey.current = animationKey;
+
+    const resetQuestionAnimation = () => {
+      introCardOpacity.setValue(0);
+      introCardTranslateX.setValue(index === 0 && !introPlayed.current ? 36 : 52);
+      introCardScale.setValue(index === 0 && !introPlayed.current ? 0.96 : 0.985);
+      introOptions.forEach(({ opacity, translateX }) => {
+        opacity.setValue(0);
+        translateX.setValue(index === 0 && !introPlayed.current ? 40 : 56);
+      });
+    };
+
+    const motionEasing = index === 0 && !introPlayed.current
+      ? Easing.out(Easing.cubic)
+      : Easing.bezier(0.16, 1, 0.3, 1);
+
+    const animateQuestionContent = (duration: number, stagger: number) =>
+      Animated.parallel([
+        Animated.parallel([
+          Animated.timing(introCardOpacity, {
+            toValue: 1,
+            duration,
+            easing: motionEasing,
+            useNativeDriver: true,
+          }),
+          Animated.timing(introCardTranslateX, {
+            toValue: 0,
+            duration,
+            easing: motionEasing,
+            useNativeDriver: true,
+          }),
+          Animated.spring(introCardScale, {
+            toValue: 1,
+            speed: 16,
+            bounciness: index === 0 && !introPlayed.current ? 8 : 4,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.stagger(
+          stagger,
+          introOptions.map(({ opacity, translateX }) =>
+            Animated.parallel([
+              Animated.timing(opacity, {
+                toValue: 1,
+                duration,
+                easing: motionEasing,
+                useNativeDriver: true,
+              }),
+              Animated.timing(translateX, {
+                toValue: 0,
+                duration,
+                easing: motionEasing,
+                useNativeDriver: true,
+              }),
+            ])
+          )
+        ),
+      ]);
+
+    resetQuestionAnimation();
+
+    if (introPlayed.current) {
+      animateQuestionContent(180, 45).start();
+      return;
+    }
+
+    introPlayed.current = true;
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(introHeaderOpacity, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(introHeaderTranslateY, {
+          toValue: 0,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+      animateQuestionContent(260, 90),
+    ]).start();
+  }, [
+    index,
+    introCardOpacity,
+    introCardScale,
+    introCardTranslateX,
+    introHeaderOpacity,
+    introHeaderTranslateY,
+    introOptions,
+    loading,
+    options,
+    words.length,
+  ]);
 
   const getMeaning = (word: Word) =>
     language === 'ru' ? (word.russian ?? word.english) : word.english;
@@ -182,52 +297,77 @@ export default function QuizScreen() {
       />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.topicName}>{topicTitle}</Text>
-          <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
-        </View>
-        {combo >= 2 && (
-          <View style={styles.comboBadge}>
-            <Text style={styles.comboText}>🔥 {combo}x</Text>
+      <Animated.View
+        style={[
+          styles.headerBlock,
+          {
+            opacity: introHeaderOpacity,
+            transform: [{ translateY: introHeaderTranslateY }],
+          },
+        ]}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.topicName}>{topicTitle}</Text>
+            <Text style={styles.progressText}>{index + 1} / {words.length}</Text>
           </View>
-        )}
-      </View>
-
-      <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
-      </View>
-
-      <View style={styles.scoreRow}>
-        <View style={styles.scorePill}>
-          <Text style={styles.scoreCorrect}>✓ {correct}</Text>
+          {combo >= 2 && (
+            <View style={styles.comboBadge}>
+              <Text style={styles.comboText}>🔥 {combo}x</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.scorePill}>
-          <Text style={styles.scoreWrong}>✕ {wrong}</Text>
-        </View>
-      </View>
 
-      <View style={styles.card}>
+        <View style={styles.progressBarBg}>
+          <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
+        </View>
+
+        <View style={styles.scoreRow}>
+          <View style={styles.scorePill}>
+            <Text style={styles.scoreCorrect}>✓ {correct}</Text>
+          </View>
+          <View style={styles.scorePill}>
+            <Text style={styles.scoreWrong}>✕ {wrong}</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            opacity: introCardOpacity,
+            transform: [{ translateX: introCardTranslateX }, { scale: introCardScale }],
+          },
+        ]}
+      >
         <Text style={styles.questionLabel}>
           {language === 'ru' ? 'Что это значит?' : 'What does this mean?'}
         </Text>
         <Text style={styles.cardChinese}>{card.chinese}</Text>
         <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
-      </View>
+      </Animated.View>
 
       <View style={styles.optionsContainer}>
-        {options.map((option) => (
-          <TouchableOpacity
+        {options.map((option, optionIndex) => (
+          <Animated.View
             key={option}
-            style={getOptionStyle(option)}
-            onPress={() => handleAnswer(option)}
-            activeOpacity={0.85}
+            style={{
+              opacity: introOptions[optionIndex]?.opacity ?? 1,
+              transform: [{ translateX: introOptions[optionIndex]?.translateX ?? 0 }],
+            }}
           >
-            <Text style={getOptionTextStyle(option)}>{option}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={getOptionStyle(option)}
+              onPress={() => handleAnswer(option)}
+              activeOpacity={0.85}
+            >
+              <Text style={getOptionTextStyle(option)}>{option}</Text>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
       </View>
     </View>
@@ -241,6 +381,7 @@ const styles = StyleSheet.create({
     position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.04)',
     fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340,
   },
+  headerBlock: { marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: {
     width: 40, height: 40, borderRadius: 20,
