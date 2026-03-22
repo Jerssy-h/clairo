@@ -44,12 +44,13 @@ export default function QuizScreen() {
   const introHeaderOpacity = useRef(new Animated.Value(0)).current;
   const introHeaderTranslateY = useRef(new Animated.Value(18)).current;
   const introCardOpacity = useRef(new Animated.Value(0)).current;
-  const introCardTranslateX = useRef(new Animated.Value(36)).current;
-  const introCardScale = useRef(new Animated.Value(0.96)).current;
+  const introCardTranslateY = useRef(new Animated.Value(24)).current;
+  const introCardScale = useRef(new Animated.Value(0.985)).current;
   const introOptions = useRef(
     Array.from({ length: 4 }, () => ({
       opacity: new Animated.Value(0),
-      translateX: new Animated.Value(44),
+      translateY: new Animated.Value(18),
+      scale: new Animated.Value(0.985),
     }))
   ).current;
 
@@ -63,56 +64,66 @@ export default function QuizScreen() {
     if (lastAnimatedKey.current === animationKey) return;
     lastAnimatedKey.current = animationKey;
 
+    const isFirstQuestion = index === 0 && !introPlayed.current;
+
     const resetQuestionAnimation = () => {
       introCardOpacity.setValue(0);
-      introCardTranslateX.setValue(index === 0 && !introPlayed.current ? 36 : 52);
-      introCardScale.setValue(index === 0 && !introPlayed.current ? 0.96 : 0.985);
-      introOptions.forEach(({ opacity, translateX }) => {
+      introCardTranslateY.setValue(isFirstQuestion ? 24 : 16);
+      introCardScale.setValue(isFirstQuestion ? 0.985 : 0.992);
+      introOptions.forEach(({ opacity, translateY, scale }) => {
         opacity.setValue(0);
-        translateX.setValue(index === 0 && !introPlayed.current ? 40 : 56);
+        translateY.setValue(isFirstQuestion ? 18 : 12);
+        scale.setValue(isFirstQuestion ? 0.985 : 0.992);
       });
     };
 
-    const motionEasing = index === 0 && !introPlayed.current
-      ? Easing.out(Easing.cubic)
-      : Easing.bezier(0.16, 1, 0.3, 1);
+    const cardEasing = isFirstQuestion
+      ? Easing.out(Easing.exp)
+      : Easing.bezier(0.22, 1, 0.36, 1);
+    const optionEasing = Easing.bezier(0.2, 0.9, 0.25, 1);
 
-    const animateQuestionContent = (duration: number, stagger: number) =>
+    const animateQuestionContent = (cardDuration: number, optionDuration: number, stagger: number) =>
       Animated.parallel([
         Animated.parallel([
           Animated.timing(introCardOpacity, {
             toValue: 1,
-            duration,
-            easing: motionEasing,
+            duration: cardDuration,
+            easing: cardEasing,
             useNativeDriver: true,
           }),
-          Animated.timing(introCardTranslateX, {
+          Animated.timing(introCardTranslateY, {
             toValue: 0,
-            duration,
-            easing: motionEasing,
+            duration: cardDuration,
+            easing: cardEasing,
             useNativeDriver: true,
           }),
-          Animated.spring(introCardScale, {
+          Animated.timing(introCardScale, {
             toValue: 1,
-            speed: 16,
-            bounciness: index === 0 && !introPlayed.current ? 8 : 4,
+            duration: cardDuration + 80,
+            easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
         ]),
         Animated.stagger(
           stagger,
-          introOptions.map(({ opacity, translateX }) =>
+          introOptions.map(({ opacity, translateY, scale }) =>
             Animated.parallel([
               Animated.timing(opacity, {
                 toValue: 1,
-                duration,
-                easing: motionEasing,
+                duration: optionDuration,
+                easing: optionEasing,
                 useNativeDriver: true,
               }),
-              Animated.timing(translateX, {
+              Animated.timing(translateY, {
                 toValue: 0,
-                duration,
-                easing: motionEasing,
+                duration: optionDuration,
+                easing: optionEasing,
+                useNativeDriver: true,
+              }),
+              Animated.timing(scale, {
+                toValue: 1,
+                duration: optionDuration,
+                easing: Easing.out(Easing.quad),
                 useNativeDriver: true,
               }),
             ])
@@ -123,7 +134,7 @@ export default function QuizScreen() {
     resetQuestionAnimation();
 
     if (introPlayed.current) {
-      animateQuestionContent(180, 45).start();
+      animateQuestionContent(260, 240, 55).start();
       return;
     }
 
@@ -144,13 +155,13 @@ export default function QuizScreen() {
           useNativeDriver: true,
         }),
       ]),
-      animateQuestionContent(260, 90),
+      animateQuestionContent(360, 320, 80),
     ]).start();
   }, [
     index,
     introCardOpacity,
     introCardScale,
-    introCardTranslateX,
+    introCardTranslateY,
     introHeaderOpacity,
     introHeaderTranslateY,
     introOptions,
@@ -341,7 +352,7 @@ export default function QuizScreen() {
           styles.card,
           {
             opacity: introCardOpacity,
-            transform: [{ translateX: introCardTranslateX }, { scale: introCardScale }],
+            transform: [{ translateY: introCardTranslateY }, { scale: introCardScale }],
           },
         ]}
       >
@@ -358,7 +369,10 @@ export default function QuizScreen() {
             key={option}
             style={{
               opacity: introOptions[optionIndex]?.opacity ?? 1,
-              transform: [{ translateX: introOptions[optionIndex]?.translateX ?? 0 }],
+              transform: [
+                { translateY: introOptions[optionIndex]?.translateY ?? 0 },
+                { scale: introOptions[optionIndex]?.scale ?? 1 },
+              ],
             }}
           >
             <TouchableOpacity

@@ -1,11 +1,11 @@
 import { AppPalette } from '@/constants/theme';
+import { getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   StyleSheet,
   Text,
@@ -21,15 +21,12 @@ const blendHex = (hex: string, target: string, amount: number) => {
     const raw = value.replace('#', '');
     return raw.length === 3 ? raw.split('').map((char) => char + char).join('') : raw;
   };
-
   const source = normalize(hex);
   const blend = normalize(target);
   const mix = (start: number, end: number) => Math.round(start + (end - start) * amount);
-
   const r = mix(parseInt(source.slice(0, 2), 16), parseInt(blend.slice(0, 2), 16));
   const g = mix(parseInt(source.slice(2, 4), 16), parseInt(blend.slice(2, 4), 16));
   const b = mix(parseInt(source.slice(4, 6), 16), parseInt(blend.slice(4, 6), 16));
-
   return `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 };
 
@@ -38,24 +35,44 @@ export default function TopicScreen() {
   const { t, language } = useLanguage();
   const { topicId, topicTitle, topicColor } = useLocalSearchParams();
   const color = (topicColor as string) || '#4F46E5';
-  const [wordCount, setWordCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchWordCount(); }, []);
+  // Start with cached value immediately — no loading flash
+  const cacheKey = `word_count_${topicId}`;
+  const [wordCount, setWordCount] = useState<number>(getCache<number>(cacheKey) ?? 0);
+  const [loading, setLoading] = useState(getCache<number>(cacheKey) === null);
 
-  const fetchWordCount = async () => {
-    const { count } = await supabase
+  useEffect(() => {
+    // If we have a cached count, show it immediately and refresh in background
+    const cached = getCache<number>(cacheKey);
+    if (cached !== null) {
+      setWordCount(cached);
+      setLoading(false);
+      // Still refresh silently in background so count stays accurate
+      supabase
+        .from('words')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicId)
+        .then(({ count }) => {
+          if (count !== null) {
+            setWordCount(count);
+            setCache(cacheKey, count);
+          }
+        });
+      return;
+    }
+    // No cache — fetch and show
+    supabase
       .from('words')
       .select('*', { count: 'exact', head: true })
-      .eq('topic_id', topicId);
-    setWordCount(count || 0);
-    setLoading(false);
-  };
+      .eq('topic_id', topicId)
+      .then(({ count }) => {
+        const n = count || 0;
+        setWordCount(n);
+        setCache(cacheKey, n);
+        setLoading(false);
+      });
+  }, [topicId]);
 
-  // Colors encode meaning — not random rainbow:
-  // Blue  = Recognition (flashcard, quiz) — recall from input
-  // Green = Production (sentence) — generate output
-  // Amber = Writing (stroke) — physical skill
   const activities = [
     {
       id: 'flashcard',
@@ -109,33 +126,25 @@ export default function TopicScreen() {
         colors={[color + 'CC', color + '30', AppPalette.bg, AppPalette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
-
-      {/* Watermark */}
       <Text style={styles.bgChar}>{(topicTitle as string)?.[0] || '中'}</Text>
 
-      {/* Back */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
         <Text style={styles.backArrow}>←</Text>
       </TouchableOpacity>
 
-      {/* Hero */}
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>{topicTitle}</Text>
-        {loading ? (
-          <ActivityIndicator color="rgba(255,255,255,0.4)" size="small" />
-        ) : (
-          <View style={styles.heroMeta}>
-            <View style={[styles.metaBadge, { backgroundColor: color + '33' }]}>
-              <Text style={styles.metaBadgeText}>{wordCount} {t.words}</Text>
-            </View>
+        <View style={styles.heroMeta}>
+          <View style={[styles.metaBadge, { backgroundColor: color + '33' }]}>
+            <Text style={styles.metaBadgeText}>
+              {loading ? '...' : `${wordCount} ${t.words}`}
+            </Text>
           </View>
-        )}
+        </View>
       </View>
 
-      {/* Label */}
       <Text style={styles.sectionLabel}>{t.chooseActivity}</Text>
 
-      {/* 2×2 Grid */}
       <View style={styles.grid}>
         {activities.map((activity) => {
           const locked = wordCount < activity.minWords;
@@ -148,29 +157,21 @@ export default function TopicScreen() {
               onPress={() => handleActivity(activity.id, activity.minWords)}
               activeOpacity={0.8}
             >
-              {/* Background gradient */}
               <LinearGradient
                 colors={[activityBase, activityShade]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFillObject}
               />
-
-              {/* Watermark icon */}
               <Text style={styles.cardBgIcon}>{activity.icon}</Text>
-
-              {/* Content */}
               <View style={styles.cardContent}>
-                {/* Big icon */}
                 <Text style={styles.cardIcon}>{activity.icon}</Text>
                 <Text style={styles.cardTitle}>{activity.title}</Text>
                 <Text style={styles.cardSubtitle}>{activity.subtitle}</Text>
               </View>
-
-              {/* Lock overlay */}
               {locked && (
                 <View style={styles.lockOverlay}>
-                  <Text style={styles.lockIcon}>🔒</Text>
+                  <Text style={styles.lockIcon}></Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -182,93 +183,23 @@ export default function TopicScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: AppPalette.bg,
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  bgChar: {
-    position: 'absolute',
-    fontSize: 300,
-    color: 'rgba(255,255,255,0.05)',
-    fontWeight: '900',
-    top: height * 0.04,
-    alignSelf: 'center',
-    lineHeight: 320,
-  },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: AppPalette.surfaceSoft,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 28,
-  },
+  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
+  bgChar: { position: 'absolute', fontSize: 300, color: 'rgba(255,255,255,0.05)', fontWeight: '900', top: height * 0.04, alignSelf: 'center', lineHeight: 320 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
   backArrow: { color: AppPalette.text, fontSize: 18 },
-
   hero: { marginBottom: 32 },
   heroTitle: { fontSize: 34, fontWeight: '800', color: AppPalette.text, letterSpacing: -1, marginBottom: 10 },
   heroMeta: { flexDirection: 'row' },
-  metaBadge: {
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-    borderWidth: 1, borderColor: AppPalette.border,
-  },
+  metaBadge: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: AppPalette.border },
   metaBadgeText: { color: AppPalette.textSoft, fontSize: 13, fontWeight: '600' },
-
-  sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: AppPalette.textFaint,
-    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
-  },
-
-  // 2×2 grid
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  gridCard: {
-    width: CARD_SIZE,
-    height: CARD_SIZE,
-    borderRadius: 24,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  cardBgIcon: {
-    position: 'absolute',
-    bottom: -16,
-    right: -8,
-    fontSize: 96,
-    color: 'rgba(255,255,255,0.12)',
-    fontWeight: '900',
-    lineHeight: 110,
-  },
-  cardContent: {
-    flex: 1,
-    padding: 18,
-    justifyContent: 'flex-end',
-    gap: 4,
-  },
-  cardIcon: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: AppPalette.text,
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: AppPalette.text,
-    letterSpacing: -0.3,
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: AppPalette.textSoft,
-    fontWeight: '500',
-  },
-  lockOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(11,16,32,0.34)',
-  },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: AppPalette.textFaint, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  gridCard: { width: CARD_SIZE, height: CARD_SIZE, borderRadius: 24, overflow: 'hidden', position: 'relative' },
+  cardBgIcon: { position: 'absolute', bottom: -16, right: -8, fontSize: 96, color: 'rgba(255,255,255,0.12)', fontWeight: '900', lineHeight: 110 },
+  cardContent: { flex: 1, padding: 18, justifyContent: 'flex-end', gap: 4 },
+  cardIcon: { fontSize: 40, fontWeight: '900', color: AppPalette.text, marginBottom: 4 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: AppPalette.text, letterSpacing: -0.3 },
+  cardSubtitle: { fontSize: 12, color: AppPalette.textSoft, fontWeight: '500' },
+  lockOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(11,16,32,0.34)' },
   lockIcon: { fontSize: 24 },
 });
