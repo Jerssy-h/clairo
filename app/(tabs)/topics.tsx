@@ -37,7 +37,7 @@ const blendHex = (hex: string, target: string, amount: number) => {
 
 export default function TopicsTabScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const enterAnim = useRef(new Animated.Value(0)).current;
@@ -78,11 +78,9 @@ export default function TopicsTabScreen() {
       <StatusBar barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>Browse</Text>
+          <Text style={styles.heroEyebrow}>{t.browse}</Text>
           <Text style={styles.heroTitle}>{t.topics}</Text>
-          <Text style={styles.heroText}>
-            Open any topic when you want to practice flashcards, quiz, sentence builder, or strokes.
-          </Text>
+          <Text style={styles.heroText}>{t.topicsTabHint}</Text>
         </View>
 
         <View style={styles.sectionHeader}>
@@ -159,13 +157,9 @@ export default function TopicsTabScreen() {
                       </View>
                       <View style={styles.topicBottomRow}>
                         <Text style={styles.topicRemaining}>
-                          {remaining > 0
-                            ? `${remaining} ${language === 'ru' ? 'осталось' : 'left'}`
-                            : language === 'ru'
-                              ? '✓ Готово'
-                              : '✓ Done'}
+                          {remaining > 0 ? `${remaining} ${t.left}` : t.done}
                         </Text>
-                        <Text style={styles.topicLastStudied}>{language === 'ru' ? 'Открыть' : 'Open'}</Text>
+                        <Text style={styles.topicLastStudied}>{t.open}</Text>
                       </View>
                     </View>
                   </TouchableOpacity>

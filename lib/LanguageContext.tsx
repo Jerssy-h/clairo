@@ -5,12 +5,14 @@ type LanguageContextType = {
   language: Language;
   t: typeof translations.en;
   toggleLanguage: () => void;
+  changeLanguage: (lang: Language) => void;
 };
 
 const LanguageContext = createContext<LanguageContextType>({
   language: 'en',
   t: translations.en,
   toggleLanguage: () => {},
+  changeLanguage: () => {},
 });
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
@@ -26,11 +28,17 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
     await setLanguage(newLang);
   };
 
+  const changeLanguage = async (lang: Language) => {
+    setLang(lang);
+    await setLanguage(lang);
+  };
+
   return (
     <LanguageContext.Provider value={{
       language,
       t: translations[language],
       toggleLanguage,
+      changeLanguage,
     }}>
       {children}
     </LanguageContext.Provider>

@@ -431,8 +431,8 @@ export default function StrokeScreen() {
         <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? color + '66' : AppPalette.success + '55' }]}>
           <Text style={styles.phasePillText}>
             {phase === 'watch'
-              ? (language === 'ru' ? '👁 Смотреть' : '👁 Watch')
-              : (language === 'ru' ? '✏️ Рисовать' : '✏️ Draw')}
+              ? (language === 'ru' ? 'Смотреть' : 'Watch')
+              : (language === 'ru' ? 'Рисовать' : 'Draw')}
           </Text>
         </View>
       </View>
@@ -503,7 +503,7 @@ export default function StrokeScreen() {
             onPress={() => { setPhase('practice'); setRound(0); }}
           >
             <Text style={styles.btnPrimaryText}>
-              {language === 'ru' ? '✏️ Практиковать' : '✏️ Practice Drawing'}
+              {language === 'ru' ? 'Практиковать' : 'Practice Drawing'}
             </Text>
           </TouchableOpacity>
         </View>
