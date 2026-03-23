@@ -1,6 +1,7 @@
 import { AppPalette } from '@/constants/theme';
 import { getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
+import { pushRecentTopic } from '@/lib/recent-topics';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -42,6 +43,8 @@ export default function TopicScreen() {
   const [loading, setLoading] = useState(getCache<number>(cacheKey) === null);
 
   useEffect(() => {
+    pushRecentTopic(String(topicId));
+
     // If we have a cached count, show it immediately and refresh in background
     const cached = getCache<number>(cacheKey);
     if (cached !== null) {
@@ -71,7 +74,7 @@ export default function TopicScreen() {
         setCache(cacheKey, n);
         setLoading(false);
       });
-  }, [topicId]);
+  }, [cacheKey, topicId]);
 
   const activities = [
     {
