@@ -34,7 +34,7 @@ Clairo is built around four core activities, each designed to reinforce Chinese 
 
 **Quiz** tests your knowledge with multiple choice questions, a combo counter that rewards streaks, and instant feedback so you learn from mistakes immediately.
 
-**Sentence Builder** shows you a Russian prompt and challenges you to assemble the correct Chinese sentence from word tiles — great for understanding grammar and word order.
+**Sentence Builder** shows you a prompt and challenges you to assemble the correct Chinese sentence from word tiles — great for understanding grammar and word order.
 
 **Stroke Order** lets you watch full stroke animations, then guides you through four practice rounds — two guided, two from memory — with a peek button when you get stuck.
 
@@ -148,7 +148,7 @@ Clairo/
 
 ## Contributing
 
-This project is open source and built in public. If you're a Russian-speaking student learning Chinese and want to contribute words, sentences, or features — PRs are welcome.
+This project is open source and built in public. If you're a student learning Chinese and want to contribute words, sentences, or features — PRs are welcome.
 
 1. Fork the repo
 2. Create your branch (`git checkout -b feature/my-feature`)
