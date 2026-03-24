@@ -46,7 +46,7 @@ On top of that, every screen supports a full **EN / RU language switcher**, prog
 
 > **Android APK — ready to install**
 >
-> 📲 [**Download latest build →**](https://expo.dev/accounts/jerssy/projects/Clairo/builds/7e3c8198-8e1c-4f5b-b71e-197ac33c78d4)
+> 📲 [**Download latest build →**](https://expo.dev/accounts/jerssy/projects/Clairo/builds/603b9ec9-99b6-4584-bf2f-4be819664985)
 >
 > On your Android device: open the link, download the APK, allow installation from unknown sources, and you're in.
 >
