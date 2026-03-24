@@ -38,7 +38,7 @@ Clairo is built around four core activities, each designed to reinforce Chinese 
 
 **Stroke Order** lets you watch full stroke animations, then guides you through four practice rounds — two guided, two from memory — with a peek button when you get stuck.
 
-On top of that, every screen supports a full **EN / RU language switcher**, progress is synced to Supabase without requiring a login, and the whole app runs on a premium dark design inspired by Spotify's aesthetic.
+On top of that, every screen supports a full **EN / RU language switcher**, progress is synced to Supabase without requiring a login, and the whole app runs on a premium dark design.
 
 ---
 
