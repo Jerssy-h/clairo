@@ -18,9 +18,9 @@
 
 ## What is Clairo?
 
-Clairo is a mobile app built specifically for **CIS students preparing to study in China**. Most Chinese learning apps are built for English speakers — Clairo covers all.
+Clairo started as a personal problem. Most Chinese learning apps are built for English speakers — leaving CIS students with no real alternative. So I built one.
 
-Built by [Emir Babayev](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**
+It's a mobile app designed specifically for **Russian-speaking students preparing to study in China**, covering everything from vocabulary and stroke order to sentence construction. Built by [Emir Babayev](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**.
 
 > *"I wanted to create a tool that will provide everything people need to become good at learning language."*
 
@@ -28,25 +28,29 @@ Built by [Emir Babayev](https://github.com/Jerssy-h), incoming CS student at **B
 
 ## Features
 
-| Activity | Description |
-|---|---|
-| 🃏 **Flashcards** | 3D flip animation · swipe left/right · per-device progress tracking |
-| 🧠 **Quiz** | Multiple choice · combo counter · instant feedback |
-| 🔤 **Sentence Builder** | Assemble Chinese words from Russian prompts · animated success state |
-| ✏️ **Stroke Order** | Watch stroke animations · 4 practice rounds (2 guided → 2 from memory) · peek button |
+Clairo is built around four core activities, each designed to reinforce Chinese in a different way.
 
-**Other highlights:**
-- 🌐 Full **EN / RU** language switcher — every string, every screen
-- 📊 Progress tracked per device via Supabase — no account needed
-- 🔒 Admin panel — add topics, words (EN + RU translations), sentences from your iPhone
-- ⚡ In-memory caching — fast loads, minimal network calls
-- 🎨 Premium dark design — Spotify-inspired, topic color gradients, glass cards
+**Flashcards** give you 3D flip animations and swipe-based review — swipe right if you know it, left if you don't. Progress is tracked per device, no account needed.
+
+**Quiz** tests your knowledge with multiple choice questions, a combo counter that rewards streaks, and instant feedback so you learn from mistakes immediately.
+
+**Sentence Builder** shows you a Russian prompt and challenges you to assemble the correct Chinese sentence from word tiles — great for understanding grammar and word order.
+
+**Stroke Order** lets you watch full stroke animations, then guides you through four practice rounds — two guided, two from memory — with a peek button when you get stuck.
+
+On top of that, every screen supports a full **EN / RU language switcher**, progress is synced to Supabase without requiring a login, and the whole app runs on a premium dark design inspired by Spotify's aesthetic.
 
 ---
 
-## Screenshots
+## Download
 
-> Coming soon — TestFlight beta in progress
+> **Android APK — ready to install**
+>
+> 📲 [**Download latest build →**](https://expo.dev/accounts/jerssy/projects/Clairo/builds/7e3c8198-8e1c-4f5b-b71e-197ac33c78d4)
+>
+> On your Android device: open the link, download the APK, allow installation from unknown sources, and you're in.
+>
+> Once installed, tap **"Check for updates"** on the home screen whenever you want to grab the latest version.
 
 ---
 
@@ -77,7 +81,7 @@ react-native-svg
 
 ```bash
 git clone git@github.com:Jerssy-h/clairo.git
-cd clairo/Clairo
+cd clairo
 npm install
 ```
 
@@ -139,17 +143,6 @@ Clairo/
 └── components/
     └── Logo.tsx              # Clairo logo
 ```
-
----
-
-## Roadmap
-
-- [ ] 🔥 Daily streak system
-- [ ] 🎬 Onboarding flow for first-time users
-- [ ] 🔤 Multi-character stroke practice (cycle through all chars in a word)
-- [ ] 📱 TestFlight public beta
-- [ ] 📊 Per-activity progress stats
-- [ ] 💬 Word of the day on home screen
 
 ---
 

@@ -1,5 +1,6 @@
 import LanguagePicker from '@/components/LanguagePicker';
 import Logo from '@/components/Logo';
+import { UpdateChecker } from '@/components/UpdateChecker';
 import { AppPalette } from '@/constants/theme';
 import { isAdmin } from '@/lib/auth';
 import { getCache, setCache } from '@/lib/cache';
@@ -307,6 +308,9 @@ export default function HomeScreen() {
             })}
           </View>
         )}
+      <View style={{ paddingHorizontal: 20, marginTop: 8, marginBottom: 8 }}>
+          <UpdateChecker />
+        </View>
       </ScrollView>
 
       {/* ── Learned words modal ── */}

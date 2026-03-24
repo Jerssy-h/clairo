@@ -3,23 +3,23 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import {
-    Animated,
-    Easing,
-    StyleSheet,
-    View,
+  Animated,
+  Easing,
+  StyleSheet,
+  View,
 } from 'react-native';
 import Svg, {
-    Circle,
-    Defs,
-    Ellipse,
-    LinearGradient,
-    Path,
-    Rect,
-    Stop,
-    Text as SvgText,
+  Circle,
+  Defs,
+  Ellipse,
+  LinearGradient,
+  Path,
+  Rect,
+  Stop,
+  Text as SvgText,
 } from 'react-native-svg';
 
-// ─── Bamboo ──────────────────────────────────────────────────────────────────
+//Bamboo
 function Bamboo() {
   return (
     <View style={styles.bamboo}>
@@ -40,7 +40,7 @@ function Bamboo() {
   );
 }
 
-// ─── Panda face ──────────────────────────────────────────────────────────────
+//Panda 
 function PandaFace() {
   return (
     <Svg width={260} height={260} viewBox="0 0 400 400">
@@ -94,7 +94,7 @@ function PandaFace() {
   );
 }
 
-// ─── Main splash screen ───────────────────────────────────────────────────────
+//Main splash screen
 export default function SplashScreen() {
   const router = useRouter();
   const winkPlayerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
