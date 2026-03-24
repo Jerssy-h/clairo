@@ -20,7 +20,7 @@
 
 Clairo started as a personal problem. Most Chinese learning apps are built for English speakers — leaving CIS students with no real alternative. So I built one.
 
-It's a mobile app designed specifically for **Russian-speaking students preparing to study in China**, covering everything from vocabulary and stroke order to sentence construction. Built by [Emir Babayev](https://github.com/Jerssy-h), incoming CS student at **Beijing Institute of Technology**.
+It's a mobile app designed specifically for **Russian/English-speaking students preparing to study in China**, covering everything from vocabulary and stroke order to sentence construction. Built by [Emir Babayev](https://github.com/Jerssy-h).
 
 > *"I wanted to create a tool that will provide everything people need to become good at learning language."*
 
