@@ -31,7 +31,7 @@ export function UpdateChecker() {
 
   return (
     <TouchableOpacity style={styles.button} onPress={checkForUpdates}>
-      <Text style={styles.text}>Проверить обновления</Text>
+      <Text style={styles.text}>upd.checker</Text>
     </TouchableOpacity>
   );
 }
@@ -39,8 +39,8 @@ export function UpdateChecker() {
 const styles = StyleSheet.create({
   button: {
     padding: 12,
-    backgroundColor: '#1DB954',
-    borderRadius: 8,
+    backgroundColor: '#124551',
+    borderRadius: 30,
     alignItems: 'center',
     margin: 16,
   },
