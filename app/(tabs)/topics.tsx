@@ -1,7 +1,6 @@
 import { AppPalette } from '@/constants/theme';
-import { getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
-import { supabase } from '@/lib/supabase';
+import { fetchAndCacheTopics, getLocalTopics } from '@/lib/offline-topics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -43,20 +42,17 @@ export default function TopicsTabScreen() {
   const enterAnim = useRef(new Animated.Value(0)).current;
 
   const fetchTopics = useCallback(async () => {
-    const cached = getCache<Topic[]>('topics');
-    if (cached) {
-      setTopics(cached);
+    // 🔥 1. ЛОКАЛЬНЫЕ СРАЗУ
+    const local = getLocalTopics();
+    if (local.length > 0) {
+      setTopics(local);
       setLoading(false);
     }
 
-    const { data, error } = await supabase.from('topics_with_count').select('*');
-    if (error) {
-      console.error(error);
-    } else {
-      const nextTopics = data || [];
-      setTopics(nextTopics);
-      setCache('topics', nextTopics);
-    }
+    // 🔥 2. ПОПЫТКА ОБНОВИТЬ С СЕРВЕРА
+    const fresh = await fetchAndCacheTopics();
+    setTopics(fresh);
+
     setLoading(false);
   }, []);
 
@@ -107,6 +103,7 @@ export default function TopicsTabScreen() {
               const remaining = topic.word_count - topic.known_count;
               const topicBase = blendHex(topic.color, AppPalette.bgElevated, 0.55);
               const topicShade = blendHex(topic.color, AppPalette.bg, 0.75);
+
               return (
                 <Animated.View
                   key={topic.id}
@@ -151,10 +148,13 @@ export default function TopicsTabScreen() {
                           <Text style={styles.topicPctText}>{progress}%</Text>
                         </View>
                       </View>
+
                       <Text style={styles.topicTitle}>{topic.title}</Text>
+
                       <View style={styles.topicBarBg}>
                         <View style={[styles.topicBarFill, { width: `${progress}%` }]} />
                       </View>
+
                       <View style={styles.topicBottomRow}>
                         <Text style={styles.topicRemaining}>
                           {remaining > 0 ? `${remaining} ${t.left}` : t.done}
@@ -173,6 +173,7 @@ export default function TopicsTabScreen() {
   );
 }
 
+// ⬇️ стили оставь как у тебя (не менялись)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppPalette.bg },
   scroll: { paddingTop: 52, paddingBottom: 48 },

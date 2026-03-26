@@ -1,8 +1,8 @@
 import { AppPalette } from '@/constants/theme';
-import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { getLocalWords, pushProgressToServer, saveProgressLocal } from '@/lib/sync';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -55,7 +55,6 @@ export default function QuizScreen() {
   ).current;
 
   useEffect(() => { setup(); }, []);
-  useEffect(() => { return () => clearCache('topics'); }, []);
   useEffect(() => { if (words.length > 0) generateOptions(index); }, [words, index, language]);
   useEffect(() => {
     if (loading || words.length < 4 || options.length === 0) return;
@@ -77,58 +76,23 @@ export default function QuizScreen() {
       });
     };
 
-    const cardEasing = isFirstQuestion
-      ? Easing.out(Easing.exp)
-      : Easing.bezier(0.22, 1, 0.36, 1);
+    const cardEasing = isFirstQuestion ? Easing.out(Easing.exp) : Easing.bezier(0.22, 1, 0.36, 1);
     const optionEasing = Easing.bezier(0.2, 0.9, 0.25, 1);
 
     const animateQuestionContent = (cardDuration: number, optionDuration: number, stagger: number) =>
       Animated.parallel([
         Animated.parallel([
-          Animated.timing(introCardOpacity, {
-            toValue: 1,
-            duration: cardDuration,
-            easing: cardEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(introCardTranslateY, {
-            toValue: 0,
-            duration: cardDuration,
-            easing: cardEasing,
-            useNativeDriver: true,
-          }),
-          Animated.timing(introCardScale, {
-            toValue: 1,
-            duration: cardDuration + 80,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
+          Animated.timing(introCardOpacity, { toValue: 1, duration: cardDuration, easing: cardEasing, useNativeDriver: true }),
+          Animated.timing(introCardTranslateY, { toValue: 0, duration: cardDuration, easing: cardEasing, useNativeDriver: true }),
+          Animated.timing(introCardScale, { toValue: 1, duration: cardDuration + 80, easing: Easing.out(Easing.quad), useNativeDriver: true }),
         ]),
-        Animated.stagger(
-          stagger,
-          introOptions.map(({ opacity, translateY, scale }) =>
-            Animated.parallel([
-              Animated.timing(opacity, {
-                toValue: 1,
-                duration: optionDuration,
-                easing: optionEasing,
-                useNativeDriver: true,
-              }),
-              Animated.timing(translateY, {
-                toValue: 0,
-                duration: optionDuration,
-                easing: optionEasing,
-                useNativeDriver: true,
-              }),
-              Animated.timing(scale, {
-                toValue: 1,
-                duration: optionDuration,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: true,
-              }),
-            ])
-          )
-        ),
+        Animated.stagger(stagger, introOptions.map(({ opacity, translateY, scale }) =>
+          Animated.parallel([
+            Animated.timing(opacity, { toValue: 1, duration: optionDuration, easing: optionEasing, useNativeDriver: true }),
+            Animated.timing(translateY, { toValue: 0, duration: optionDuration, easing: optionEasing, useNativeDriver: true }),
+            Animated.timing(scale, { toValue: 1, duration: optionDuration, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          ])
+        )),
       ]);
 
     resetQuestionAnimation();
@@ -142,44 +106,27 @@ export default function QuizScreen() {
 
     Animated.sequence([
       Animated.parallel([
-        Animated.timing(introHeaderOpacity, {
-          toValue: 1,
-          duration: 320,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(introHeaderTranslateY, {
-          toValue: 0,
-          duration: 320,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
+        Animated.timing(introHeaderOpacity, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(introHeaderTranslateY, { toValue: 0, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]),
       animateQuestionContent(360, 320, 80),
     ]).start();
-  }, [
-    index,
-    introCardOpacity,
-    introCardScale,
-    introCardTranslateY,
-    introHeaderOpacity,
-    introHeaderTranslateY,
-    introOptions,
-    loading,
-    options,
-    words.length,
-  ]);
+  }, [index, introCardOpacity, introCardScale, introCardTranslateY, introHeaderOpacity, introHeaderTranslateY, introOptions, loading, options, words.length]);
 
   const getMeaning = (word: Word) =>
     language === 'ru' ? (word.russian ?? word.english) : word.english;
 
   const fetchWords = async () => {
-    const cacheKey = `words_${topicId}`;
-    const cached = getCache<Word[]>(cacheKey);
-    if (cached) { setWords(shuffle(cached)); setLoading(false); return; }
+    // Сначала из локальной БД
+    const local = getLocalWords(topicId as string);
+    if (local.length > 0) {
+      setWords(shuffle(local));
+      setLoading(false);
+      return;
+    }
+    // Фоллбэк на Supabase
     const { data } = await supabase.from('words').select('*').eq('topic_id', topicId);
     setWords(shuffle(data || []));
-    setCache(cacheKey, data || []);
     setLoading(false);
   };
 
@@ -191,13 +138,8 @@ export default function QuizScreen() {
 
   const saveProgress = async (wordId: string, isKnown: boolean) => {
     if (!deviceId) return;
-    const { error } = await supabase.from('progress').upsert({
-      device_id: deviceId,
-      word_id: wordId,
-      known: isKnown,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'device_id,word_id' });
-    if (error) console.error(error.message);
+    saveProgressLocal(deviceId, wordId, isKnown);
+    pushProgressToServer(deviceId, wordId, isKnown);
   };
 
   const generateOptions = (currentIndex: number) => {
@@ -222,7 +164,7 @@ export default function QuizScreen() {
     saveProgress(words[index].id, isCorrect).finally(() => setSavingAnswer(false));
 
     setTimeout(() => {
-      if (index === words.length - 1) { clearCache('topics'); setFinished(true); }
+      if (index === words.length - 1) setFinished(true);
       else setIndex(i => i + 1);
     }, 900);
   };
@@ -288,10 +230,7 @@ export default function QuizScreen() {
             <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: color }]}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: color }]} onPress={() => router.back()}>
           <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -303,21 +242,10 @@ export default function QuizScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[color + 'CC', color + '36', AppPalette.bg]}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <LinearGradient colors={[color + 'CC', color + '36', AppPalette.bg]} style={StyleSheet.absoluteFillObject} />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
-      <Animated.View
-        style={[
-          styles.headerBlock,
-          {
-            opacity: introHeaderOpacity,
-            transform: [{ translateY: introHeaderTranslateY }],
-          },
-        ]}
-      >
+      <Animated.View style={[styles.headerBlock, { opacity: introHeaderOpacity, transform: [{ translateY: introHeaderTranslateY }] }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
             <Text style={styles.backArrow}>←</Text>
@@ -338,27 +266,13 @@ export default function QuizScreen() {
         </View>
 
         <View style={styles.scoreRow}>
-          <View style={styles.scorePill}>
-            <Text style={styles.scoreCorrect}>✓ {correct}</Text>
-          </View>
-          <View style={styles.scorePill}>
-            <Text style={styles.scoreWrong}>✕ {wrong}</Text>
-          </View>
+          <View style={styles.scorePill}><Text style={styles.scoreCorrect}>✓ {correct}</Text></View>
+          <View style={styles.scorePill}><Text style={styles.scoreWrong}>✕ {wrong}</Text></View>
         </View>
       </Animated.View>
 
-      <Animated.View
-        style={[
-          styles.card,
-          {
-            opacity: introCardOpacity,
-            transform: [{ translateY: introCardTranslateY }, { scale: introCardScale }],
-          },
-        ]}
-      >
-        <Text style={styles.questionLabel}>
-          {language === 'ru' ? 'Что это значит?' : 'What does this mean?'}
-        </Text>
+      <Animated.View style={[styles.card, { opacity: introCardOpacity, transform: [{ translateY: introCardTranslateY }, { scale: introCardScale }] }]}>
+        <Text style={styles.questionLabel}>{language === 'ru' ? 'Что это значит?' : 'What does this mean?'}</Text>
         <Text style={styles.cardChinese}>{card.chinese}</Text>
         <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
       </Animated.View>
@@ -373,13 +287,8 @@ export default function QuizScreen() {
                 { translateY: introOptions[optionIndex]?.translateY ?? 0 },
                 { scale: introOptions[optionIndex]?.scale ?? 1 },
               ],
-            }}
-          >
-            <TouchableOpacity
-              style={getOptionStyle(option)}
-              onPress={() => handleAnswer(option)}
-              activeOpacity={0.85}
-            >
+            }}>
+            <TouchableOpacity style={getOptionStyle(option)} onPress={() => handleAnswer(option)} activeOpacity={0.85}>
               <Text style={getOptionTextStyle(option)}>{option}</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -392,79 +301,44 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  bgChar: {
-    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)',
-    fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340,
-  },
+  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
   headerBlock: { marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-  backCircle: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center',
-  },
+  backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
   backArrow: { color: AppPalette.text, fontSize: 18 },
   headerCenter: { flex: 1 },
   topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
   progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
-  comboBadge: {
-    backgroundColor: 'rgba(255,201,120,0.18)', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(255,201,120,0.28)',
-  },
+  comboBadge: { backgroundColor: 'rgba(255,201,120,0.18)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,201,120,0.28)' },
   comboText: { color: AppPalette.warning, fontSize: 13, fontWeight: '700' },
-  progressBarBg: {
-    height: 3, backgroundColor: AppPalette.surfaceSoft,
-    borderRadius: 2, marginBottom: 20, overflow: 'hidden',
-  },
+  progressBarBg: { height: 3, backgroundColor: AppPalette.surfaceSoft, borderRadius: 2, marginBottom: 20, overflow: 'hidden' },
   progressBarFill: { height: 3, borderRadius: 2 },
   scoreRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  scorePill: {
-    backgroundColor: AppPalette.surface, borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 6,
-  },
+  scorePill: { backgroundColor: AppPalette.surface, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   scoreCorrect: { color: AppPalette.success, fontSize: 14, fontWeight: '700' },
   scoreWrong: { color: AppPalette.danger, fontSize: 14, fontWeight: '700' },
-  card: {
-    backgroundColor: AppPalette.bgElevated, borderRadius: 28,
-    borderWidth: 1, borderColor: AppPalette.border,
-    padding: 32, alignItems: 'center', marginBottom: 20,
-  },
+  card: { backgroundColor: AppPalette.bgElevated, borderRadius: 28, borderWidth: 1, borderColor: AppPalette.border, padding: 32, alignItems: 'center', marginBottom: 20 },
   questionLabel: { color: AppPalette.textMuted, fontSize: 13, marginBottom: 16, letterSpacing: 0.5 },
   cardChinese: { fontSize: 72, color: AppPalette.text, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
   cardPinyin: { fontSize: 22, fontWeight: '600' },
   optionsContainer: { gap: 10 },
-  optionBtn: {
-    backgroundColor: AppPalette.surface, borderRadius: 16,
-    padding: 16, alignItems: 'center',
-    borderWidth: 1, borderColor: AppPalette.border,
-  },
+  optionBtn: { backgroundColor: AppPalette.surface, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border },
   optionCorrect: { backgroundColor: 'rgba(126,224,161,0.16)', borderColor: AppPalette.success },
   optionWrong: { backgroundColor: 'rgba(255,142,158,0.14)', borderColor: AppPalette.danger },
   optionDim: { opacity: 0.4 },
   optionText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
   decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
-  emptyCard: {
-    backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28,
-    alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border,
-    marginBottom: 24, width: '100%',
-  },
+  emptyCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border, marginBottom: 24, width: '100%' },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
   emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },
   finishedEmoji: { fontSize: 64, marginBottom: 16 },
   finishedTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 8 },
   finishedSubtitle: { fontSize: 16, color: AppPalette.textMuted, marginBottom: 30 },
   resultsRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
-  resultBox: {
-    backgroundColor: AppPalette.surface, borderRadius: 16,
-    padding: 20, alignItems: 'center', minWidth: 90,
-  },
-  resultNumber: { fontSize: 28, fontWeight: '800', color: AppPalette.text, },
+  resultBox: { backgroundColor: AppPalette.surface, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 90 },
+  resultNumber: { fontSize: 28, fontWeight: '800', color: AppPalette.text },
   resultLabel: { fontSize: 12, color: AppPalette.textMuted, marginTop: 4 },
-  backBtn: {
-    backgroundColor: AppPalette.surfaceSoft, borderRadius: 20,
-    paddingHorizontal: 32, paddingVertical: 14,
-    borderWidth: 1, borderColor: AppPalette.borderStrong,
-  },
+  backBtn: { backgroundColor: AppPalette.surfaceSoft, borderRadius: 20, paddingHorizontal: 32, paddingVertical: 14, borderWidth: 1, borderColor: AppPalette.borderStrong },
   backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
   actionBtn: { borderRadius: 20, paddingHorizontal: 32, paddingVertical: 16 },
   actionBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },

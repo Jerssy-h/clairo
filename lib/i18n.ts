@@ -4,6 +4,13 @@ export type Language = 'en' | 'ru';
 
 export const translations = {
   en: {
+    // Flashcards & Learning (Missing keys fixed)
+    iKnowThis: 'I know this',
+    stillLearning: 'Still learning',
+    learning: 'Learning',
+    tapToFlip: 'Tap to flip',
+    
+    // Existing keys
     goodMorning: 'Good morning',
     goodAfternoon: 'Good afternoon',
     goodEvening: 'Good evening',
@@ -56,7 +63,6 @@ export const translations = {
     addSentencesFromAdmin: 'Add sentences from the Admin panel',
     complete2: 'Complete!',
     tryAgain: 'Try again...',
-    // Stroke order activity
     strokeOrder: 'Stroke Order',
     strokeDescription: 'Watch & practice writing characters',
     strokeWatch: 'Watch',
@@ -69,7 +75,6 @@ export const translations = {
     strokeWatchAgain: '👁 Watch Again',
     strokePlaying: '▶ Playing…',
     strokeReplay: '↺ Replay',
-    // Home screen
     recentTopics: 'Last topics we practiced',
     seeAll: 'See all',
     noRecentPractice: 'No recent practice yet',
@@ -82,11 +87,17 @@ export const translations = {
     left: 'left',
     done: '✓ Done',
     open: 'Open',
-    // Topics tab
     browse: 'Browse',
     topicsTabHint: 'Open any topic when you want to practice flashcards, quiz, sentence builder, or strokes.',
   },
   ru: {
+    // Flashcards & Learning (Missing keys fixed)
+    iKnowThis: 'Я это знаю',
+    stillLearning: 'Ещё учу',
+    learning: 'Изучаю',
+    tapToFlip: 'Нажми, чтобы перевернуть',
+
+    // Existing keys
     goodMorning: 'Доброе утро',
     goodAfternoon: 'Добрый день',
     goodEvening: 'Добрый вечер',
@@ -139,7 +150,6 @@ export const translations = {
     addSentencesFromAdmin: 'Добавьте предложения в панели администратора',
     complete2: 'Завершено!',
     tryAgain: 'Попробуйте снова...',
-    // Stroke order activity
     strokeOrder: 'Пропись',
     strokeDescription: 'Смотрите и практикуйте написание иероглифов',
     strokeWatch: 'Смотреть',
@@ -152,7 +162,6 @@ export const translations = {
     strokeWatchAgain: 'Смотреть снова',
     strokePlaying: '▶ Воспроизводится…',
     strokeReplay: '↺ Повтор',
-    // Home screen
     recentTopics: 'Последние темы',
     seeAll: 'Все темы',
     noRecentPractice: 'Нет недавних занятий',
@@ -165,7 +174,6 @@ export const translations = {
     left: 'осталось',
     done: '✓ Готово',
     open: 'Открыть',
-    // Topics tab
     browse: 'Обзор',
     topicsTabHint: 'Откройте любую тему для практики карточек, викторины, предложений или иероглифов.',
   },

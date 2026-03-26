@@ -2,7 +2,7 @@
   "expo": {
     "name": "Clairo",
     "slug": "Clairo",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/clairo_panda_v2.png",
     "scheme": "clairo",
@@ -43,7 +43,8 @@
           }
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

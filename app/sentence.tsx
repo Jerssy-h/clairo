@@ -1,8 +1,8 @@
 import { AppPalette } from '@/constants/theme';
-import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { getLocalSentences, getLocalWords, pushProgressToServer, saveProgressLocal } from '@/lib/sync';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -46,8 +46,7 @@ export default function SentenceScreen() {
   const [savingAnswer, setSavingAnswer] = useState(false);
   const [wordIdByChinese, setWordIdByChinese] = useState<Record<string, string>>({});
 
-  // ── Animation refs ──────────────────────────────────────────────────────────
-  const gradientAnim = useRef(new Animated.Value(0)).current; // 0 = topic color, 1 = green
+  const gradientAnim = useRef(new Animated.Value(0)).current;
   const checkmarkScale = useRef(new Animated.Value(0)).current;
   const checkmarkOpacity = useRef(new Animated.Value(0)).current;
   const wordAnims = useRef<Animated.Value[]>([]).current;
@@ -59,38 +58,44 @@ export default function SentenceScreen() {
       setAvailable([...sentences[index].chinese_words]);
       setSelected([]);
       setResult(null);
-      // Reset animations
       gradientAnim.setValue(0);
       checkmarkScale.setValue(0);
       checkmarkOpacity.setValue(0);
     }
   }, [sentences, index]);
 
-  // Rebuild word anim refs when selected changes
   useEffect(() => {
     while (wordAnims.length < selected.length) {
       wordAnims.push(new Animated.Value(1));
     }
   }, [selected]);
 
-  const fetchWordIdMapping = async () => {
-    const cacheKey = `word_map_${topicId}`;
-    const cached = getCache<Record<string, string>>(cacheKey);
-    if (cached) { setWordIdByChinese(cached); return; }
-    const { data } = await supabase.from('words').select('id, chinese').eq('topic_id', topicId);
+  const buildWordIdMapping = (words: any[]) => {
     const mapping: Record<string, string> = {};
-    (data || []).forEach((w) => { if (w.chinese && w.id) mapping[w.chinese] = w.id; });
+    words.forEach((w) => { if (w.chinese && w.id) mapping[w.chinese] = w.id; });
     setWordIdByChinese(mapping);
-    setCache(cacheKey, mapping);
   };
 
   const fetchSentences = async () => {
-    const cacheKey = `sentences_${topicId}`;
-    const cached = getCache<Sentence[]>(cacheKey);
-    if (cached) { setSentences(cached); setLoading(false); return; }
-    const { data } = await supabase.from('sentences').select('*').eq('topic_id', topicId);
-    setSentences(data || []);
-    setCache(cacheKey, data || []);
+    // Сначала из локальной БД
+    const localSentences = getLocalSentences(topicId as string);
+    if (localSentences.length > 0) {
+      setSentences(localSentences);
+      setLoading(false);
+
+      // Маппинг слов из локальной БД
+      const localWords = getLocalWords(topicId as string);
+      buildWordIdMapping(localWords);
+      return;
+    }
+
+    // Фоллбэк на Supabase
+    const { data: sentenceData } = await supabase.from('sentences').select('*').eq('topic_id', topicId);
+    setSentences(sentenceData || []);
+
+    const { data: wordData } = await supabase.from('words').select('id, chinese').eq('topic_id', topicId);
+    buildWordIdMapping(wordData || []);
+
     setLoading(false);
   };
 
@@ -98,12 +103,10 @@ export default function SentenceScreen() {
     const id = await getDeviceId();
     setDeviceId(id);
     setLoading(true);
-    await fetchWordIdMapping();
     await fetchSentences();
   };
 
   const playSuccessAnimation = () => {
-    // Reset word anims
     const bounces = selected.map((_, i) => {
       const anim = new Animated.Value(1);
       wordAnims[i] = anim;
@@ -115,19 +118,12 @@ export default function SentenceScreen() {
     });
 
     Animated.parallel([
-      // Background goes green
-      Animated.timing(gradientAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: false, // can't use native for color interpolation
-      }),
-      // Checkmark pops in
+      Animated.timing(gradientAnim, { toValue: 1, duration: 400, useNativeDriver: false }),
       Animated.sequence([
         Animated.delay(150),
         Animated.spring(checkmarkScale, { toValue: 1, friction: 5, tension: 180, useNativeDriver: true }),
         Animated.timing(checkmarkOpacity, { toValue: 1, duration: 1, useNativeDriver: true }),
       ]),
-      // Words bounce one by one
       Animated.stagger(60, bounces),
     ]).start();
   };
@@ -150,30 +146,23 @@ export default function SentenceScreen() {
 
   const handleCheck = async () => {
     if (result || savingAnswer) return;
-    const correct = sentences[index].correct_order;
-    const isCorrect = selected.join(' ') === correct.join(' ');
+    const correctOrder = sentences[index].correct_order;
+    const isCorrect = selected.join(' ') === correctOrder.join(' ');
 
     setSavingAnswer(true);
     try {
       const targetWordIds = Array.from(
         new Set(
-          correct
+          correctOrder
             .map((chinese) => wordIdByChinese[chinese])
             .filter((id): id is string => typeof id === 'string' && id.length > 0)
         )
       );
       if (isCorrect && deviceId && targetWordIds.length > 0) {
-        await Promise.all(
-          targetWordIds.map((wordId) =>
-            supabase.from('progress').upsert({
-              device_id: deviceId,
-              word_id: wordId,
-              known: true,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'device_id,word_id' })
-          )
-        );
-        clearCache('topics');
+        for (const wordId of targetWordIds) {
+          saveProgressLocal(deviceId, wordId, true);
+          pushProgressToServer(deviceId, wordId, true);
+        }
       }
     } finally {
       setSavingAnswer(false);
@@ -194,7 +183,6 @@ export default function SentenceScreen() {
     else setIndex(i => i + 1);
   };
 
-  // Interpolated gradient colors
   const gradientColor1 = gradientAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [color + 'CC', SUCCESS_GREEN + 'EE'],
@@ -231,9 +219,7 @@ export default function SentenceScreen() {
     const percentage = Math.round((score / sentences.length) * 100);
     return (
       <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
-        <Text style={styles.finishedEmoji}>
-          {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
-        </Text>
+        <Text style={styles.finishedEmoji}>{percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}</Text>
         <Text style={styles.finishedTitle}>{t.complete2}</Text>
         <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
         <View style={styles.resultsRow}>
@@ -250,10 +236,7 @@ export default function SentenceScreen() {
             <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: color }]}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: color }]} onPress={() => router.back()}>
           <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -265,7 +248,6 @@ export default function SentenceScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Animated background gradient */}
       <Animated.View style={StyleSheet.absoluteFillObject}>
         <AnimatedLinearGradient
           colors={[gradientColor1, gradientColor2, AppPalette.bg]}
@@ -275,7 +257,6 @@ export default function SentenceScreen() {
 
       <Text style={styles.bgChar}>文</Text>
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Text style={styles.backArrow}>←</Text>
@@ -289,18 +270,15 @@ export default function SentenceScreen() {
         </View>
       </View>
 
-      {/* Progress bar */}
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
       </View>
 
-      {/* Russian sentence card */}
       <View style={styles.russianCard}>
         <Text style={styles.russianLabel}>{t.translateSentence}</Text>
         <Text style={styles.russianText}>{sentence.russian}</Text>
       </View>
 
-      {/* Answer area */}
       <View style={styles.answerArea}>
         <Text style={styles.areaLabel}>{t.yourAnswer}</Text>
         <View style={[
@@ -317,10 +295,7 @@ export default function SentenceScreen() {
                 return (
                   <Animated.View key={i} style={{ transform: [{ scale }] }}>
                     <TouchableOpacity
-                      style={[
-                        styles.selectedWord,
-                        { backgroundColor: result === 'correct' ? SUCCESS_GREEN : color },
-                      ]}
+                      style={[styles.selectedWord, { backgroundColor: result === 'correct' ? SUCCESS_GREEN : color }]}
                       onPress={() => handleRemoveWord(word, i)}
                     >
                       <Text style={styles.selectedWordText}>{word}</Text>
@@ -331,16 +306,9 @@ export default function SentenceScreen() {
             </View>
           )}
 
-          {/* Checkmark overlay on correct */}
           {result === 'correct' && (
             <Animated.View
-              style={[
-                styles.checkmarkOverlay,
-                {
-                  opacity: checkmarkOpacity,
-                  transform: [{ scale: checkmarkScale }],
-                },
-              ]}
+              style={[styles.checkmarkOverlay, { opacity: checkmarkOpacity, transform: [{ scale: checkmarkScale }] }]}
               pointerEvents="none"
             >
               <Text style={styles.checkmarkText}>✓</Text>
@@ -348,12 +316,9 @@ export default function SentenceScreen() {
           )}
         </View>
 
-        {result === 'wrong' && (
-          <Text style={styles.resultText}>{t.tryAgain}</Text>
-        )}
+        {result === 'wrong' && <Text style={styles.resultText}>{t.tryAgain}</Text>}
       </View>
 
-      {/* Available words */}
       <View style={styles.availableArea}>
         <Text style={styles.areaLabel}>{t.availableWords}</Text>
         <View style={styles.wordsRow}>
@@ -369,23 +334,13 @@ export default function SentenceScreen() {
         </View>
       </View>
 
-      {/* Action button */}
       {result === 'correct' ? (
-        <TouchableOpacity
-          style={[styles.checkBtn, { backgroundColor: SUCCESS_GREEN_BRIGHT }]}
-          onPress={handleNext}
-        >
-          <Text style={styles.checkBtnText}>
-            {index === sentences.length - 1 ? t.finish : t.next}
-          </Text>
+        <TouchableOpacity style={[styles.checkBtn, { backgroundColor: SUCCESS_GREEN_BRIGHT }]} onPress={handleNext}>
+          <Text style={styles.checkBtnText}>{index === sentences.length - 1 ? t.finish : t.next}</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[
-            styles.checkBtn,
-            { backgroundColor: color },
-            selected.length === 0 && styles.checkBtnDisabled,
-          ]}
+          style={[styles.checkBtn, { backgroundColor: color }, selected.length === 0 && styles.checkBtnDisabled]}
           onPress={handleCheck}
           disabled={selected.length === 0}
         >
@@ -396,190 +351,56 @@ export default function SentenceScreen() {
   );
 }
 
-// Animated.createAnimatedComponent wrapper for LinearGradient
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: AppPalette.bg,
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  bgChar: {
-    position: 'absolute',
-    fontSize: 320,
-    color: 'rgba(255,255,255,0.05)',
-    fontWeight: '900',
-    top: height * 0.05,
-    alignSelf: 'center',
-    lineHeight: 340,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  backCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: AppPalette.surfaceSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
+  backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
   backArrow: { color: AppPalette.text, fontSize: 18 },
   headerCenter: { flex: 1 },
   topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
   progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
-  scorePill: {
-    backgroundColor: AppPalette.surface,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
+  scorePill: { backgroundColor: AppPalette.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   scoreText: { color: AppPalette.success, fontSize: 14, fontWeight: '700' },
-  progressBarBg: {
-    height: 3,
-    backgroundColor: AppPalette.surfaceSoft,
-    borderRadius: 2,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
+  progressBarBg: { height: 3, backgroundColor: AppPalette.surfaceSoft, borderRadius: 2, marginBottom: 20, overflow: 'hidden' },
   progressBarFill: { height: 3, borderRadius: 2 },
-  russianCard: {
-    backgroundColor: AppPalette.bgElevated,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: AppPalette.border,
-  },
-  russianLabel: {
-    color: AppPalette.textMuted,
-    fontSize: 12,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
+  russianCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: AppPalette.border },
+  russianLabel: { color: AppPalette.textMuted, fontSize: 12, marginBottom: 8, letterSpacing: 0.5 },
   russianText: { color: AppPalette.text, fontSize: 22, fontWeight: '700' },
   answerArea: { marginBottom: 16 },
-  areaLabel: {
-    color: AppPalette.textMuted,
-    fontSize: 12,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  answerBox: {
-    backgroundColor: AppPalette.bgElevated,
-    borderRadius: 16,
-    padding: 16,
-    minHeight: 64,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: AppPalette.border,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  answerCorrect: {
-    borderColor: SUCCESS_GREEN_BRIGHT,
-    backgroundColor: 'rgba(111,214,199,0.14)',
-  },
-  answerWrong: {
-    borderColor: AppPalette.danger,
-    backgroundColor: 'rgba(255,142,158,0.12)',
-  },
-  placeholder: {
-    color: AppPalette.textFaint,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  wordsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  selectedWord: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
+  areaLabel: { color: AppPalette.textMuted, fontSize: 12, marginBottom: 8, letterSpacing: 0.5 },
+  answerBox: { backgroundColor: AppPalette.bgElevated, borderRadius: 16, padding: 16, minHeight: 64, justifyContent: 'center', borderWidth: 1, borderColor: AppPalette.border, position: 'relative', overflow: 'hidden' },
+  answerCorrect: { borderColor: SUCCESS_GREEN_BRIGHT, backgroundColor: 'rgba(111,214,199,0.14)' },
+  answerWrong: { borderColor: AppPalette.danger, backgroundColor: 'rgba(255,142,158,0.12)' },
+  placeholder: { color: AppPalette.textFaint, fontSize: 14, textAlign: 'center' },
+  wordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  selectedWord: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
   selectedWordText: { color: AppPalette.white, fontSize: 18, fontWeight: '600' },
-  checkmarkOverlay: {
-    position: 'absolute',
-    right: 14,
-    top: '50%',
-    marginTop: -18,
-  },
-  checkmarkText: {
-    fontSize: 36,
-    color: SUCCESS_GREEN_BRIGHT,
-    fontWeight: '900',
-  },
+  checkmarkOverlay: { position: 'absolute', right: 14, top: '50%', marginTop: -18 },
+  checkmarkText: { fontSize: 36, color: SUCCESS_GREEN_BRIGHT, fontWeight: '900' },
   resultText: { color: AppPalette.danger, fontSize: 13, marginTop: 8, fontWeight: '600' },
   availableArea: { marginBottom: 20 },
-  availableWord: {
-    backgroundColor: AppPalette.surface,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: AppPalette.border,
-  },
+  availableWord: { backgroundColor: AppPalette.surface, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: AppPalette.border },
   wordDim: { opacity: 0.3 },
   availableWordText: { color: AppPalette.text, fontSize: 18, fontWeight: '600' },
-  checkBtn: {
-    borderRadius: 20,
-    padding: 18,
-    alignItems: 'center',
-  },
+  checkBtn: { borderRadius: 20, padding: 18, alignItems: 'center' },
   checkBtnDisabled: { opacity: 0.3 },
   checkBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },
-  decorChar: {
-    fontSize: 120,
-    color: 'rgba(255,255,255,0.16)',
-    fontWeight: '900',
-    marginBottom: 24,
-  },
-  emptyCard: {
-    backgroundColor: AppPalette.bgElevated,
-    borderRadius: 24,
-    padding: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: AppPalette.border,
-    marginBottom: 24,
-    width: '100%',
-  },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
+  emptyCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border, marginBottom: 24, width: '100%' },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
   emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },
   finishedEmoji: { fontSize: 64, marginBottom: 16 },
   finishedTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 8 },
   finishedSubtitle: { fontSize: 16, color: AppPalette.textMuted, marginBottom: 30 },
   resultsRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
-  resultBox: {
-    backgroundColor: AppPalette.surface,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    minWidth: 90,
-  },
+  resultBox: { backgroundColor: AppPalette.surface, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 90 },
   resultNumber: { fontSize: 28, fontWeight: '800', color: AppPalette.text },
   resultLabel: { fontSize: 12, color: AppPalette.textMuted, marginTop: 4 },
-  backBtn: {
-    backgroundColor: AppPalette.surfaceSoft,
-    borderRadius: 20,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: AppPalette.borderStrong,
-  },
+  backBtn: { backgroundColor: AppPalette.surfaceSoft, borderRadius: 20, paddingHorizontal: 32, paddingVertical: 14, borderWidth: 1, borderColor: AppPalette.borderStrong },
   backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
   actionBtn: { borderRadius: 20, paddingHorizontal: 32, paddingVertical: 16 },
   actionBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },

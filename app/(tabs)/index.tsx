@@ -3,18 +3,18 @@ import Logo from '@/components/Logo';
 import { UpdateChecker } from '@/components/UpdateChecker';
 import { AppPalette } from '@/constants/theme';
 import { isAdmin } from '@/lib/auth';
-import { getCache, setCache } from '@/lib/cache';
-import { getDeviceId } from '@/lib/device';
+import { initDB } from '@/lib/db';
 import { useLanguage } from '@/lib/LanguageContext';
+import { fetchAndCacheTopics, getLocalTopics } from '@/lib/offline-topics';
 import { getRecentTopicIds } from '@/lib/recent-topics';
-import { supabase } from '@/lib/supabase';
+import { syncAllData } from '@/lib/sync';
 import { getUsername, syncUsernameToSupabase } from '@/lib/user';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
-  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -57,60 +57,76 @@ let splashShown = false;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
+
+  const [isReady, setIsReady] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [recentTopicIds, setRecentTopicIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminMode, setAdminMode] = useState(false);
   const [username, setUsernameState] = useState('');
-  const [showLearned, setShowLearned] = useState(false);
-  const [learnedWords, setLearnedWords] = useState<any[]>([]);
-  const [loadingLearned, setLoadingLearned] = useState(false);
+
   const enterAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!splashShown) {
-      splashShown = true;
-      const timer = setTimeout(() => {
-        router.replace('/splash');
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-    isAdmin().then(setAdminMode);
-    getUsername().then((name) => {
-      const resolved = name || '';
-      setUsernameState(resolved);
-      if (resolved) syncUsernameToSupabase(resolved);
-    });
-  }, [router]);
+    async function prepare() {
+      try {
+        await initDB();
 
-  useEffect(() => {
-    Animated.timing(enterAnim, {
-      toValue: 1,
-      duration: 520,
-      useNativeDriver: true,
-    }).start();
-  }, [enterAnim]);
+        const [admin, name] = await Promise.all([isAdmin(), getUsername()]);
+        setAdminMode(admin);
+        if (name) {
+          setUsernameState(name);
+          syncUsernameToSupabase(name);
+        }
+
+        setIsReady(true);
+
+        // Фоновая синхронизация всего контента
+        syncAllData().then(() => loadDashboard());
+
+        if (!splashShown) {
+          splashShown = true;
+          setTimeout(() => router.replace('/splash'), 50);
+        }
+
+        Animated.timing(enterAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
+      } catch (e) {
+        console.error('Ошибка инициализации:', e);
+        setIsReady(true);
+      }
+    }
+
+    prepare();
+  }, []);
 
   const loadDashboard = useCallback(async () => {
-    const cached = getCache<Topic[]>('topics');
-    if (cached) {
-      setTopics(cached);
+    if (!isReady) return;
+
+    try {
+      const local = await getLocalTopics();
+      if (local && local.length > 0) {
+        setTopics(local);
+        setLoading(false);
+      }
+
+      const recentIds = await getRecentTopicIds();
+      setRecentTopicIds(recentIds || []);
+
+      const fresh = await fetchAndCacheTopics();
+      if (fresh && fresh.length > 0) {
+        setTopics(fresh);
+      }
+    } catch (err) {
+      console.log('Ошибка загрузки данных:', err);
+    } finally {
       setLoading(false);
     }
-    const recentIds = await getRecentTopicIds();
-    setRecentTopicIds(recentIds);
-    if (!cached) setLoading(true);
-    const { data, error } = await supabase.from('topics_with_count').select('*');
-    if (error) {
-      console.error(error);
-    } else {
-      const nextTopics = data || [];
-      setTopics(nextTopics);
-      setCache('topics', nextTopics);
-    }
-    setLoading(false);
-  }, []);
+  }, [isReady]);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,20 +134,8 @@ export default function HomeScreen() {
     }, [loadDashboard])
   );
 
-  const fetchLearnedWords = async () => {
-    setLoadingLearned(true);
-    const deviceId = await getDeviceId();
-    const { data } = await supabase
-      .from('progress')
-      .select('word_id, known, words(chinese, pinyin, english)')
-      .eq('device_id', deviceId)
-      .eq('known', true);
-    setLearnedWords(data || []);
-    setLoadingLearned(false);
-  };
-
-  const totalWords = topics.reduce((sum, topic) => sum + topic.word_count, 0);
-  const totalKnown = topics.reduce((sum, topic) => sum + topic.known_count, 0);
+  const totalWords = topics.reduce((sum, tp) => sum + (tp.word_count || 0), 0);
+  const totalKnown = topics.reduce((sum, tp) => sum + (tp.known_count || 0), 0);
   const overallProgress = totalWords > 0 ? Math.round((totalKnown / totalWords) * 100) : 0;
 
   const greeting =
@@ -171,12 +175,20 @@ export default function HomeScreen() {
     });
   };
 
+  if (!isReady) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator color="white" size="large" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-        {/* ── Header card ── */}
+        {/* Header */}
         <Animated.View
           style={[
             styles.headerCard,
@@ -201,16 +213,12 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            {/* ← New language picker replaces old EN/RU button */}
             <LanguagePicker />
           </View>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity
-            style={styles.progressRow}
-            onPress={() => { setShowLearned(true); fetchLearnedWords(); }}
-            activeOpacity={0.82}>
+          <View style={styles.progressRow}>
             <View style={styles.progressLeft}>
               <Text style={styles.progressLabel}>{t.overallProgress}</Text>
               <Text style={styles.progressSub}>{totalKnown} {t.wordsLearned}</Text>
@@ -226,10 +234,10 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
         </Animated.View>
 
-        {/* ── Recent topics ── */}
+        {/* Recent topics */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t.recentTopics}</Text>
           <TouchableOpacity onPress={() => router.push('/topics')}>
@@ -273,7 +281,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* ── Recommendations ── */}
+        {/* Recommendations */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t.recommendations}</Text>
         </View>
@@ -308,50 +316,10 @@ export default function HomeScreen() {
             })}
           </View>
         )}
-      <View style={{ paddingHorizontal: 20, marginTop: 8, marginBottom: 8 }}>
-          <UpdateChecker />
-        </View>
-      </ScrollView>
 
-      {/* ── Learned words modal ── */}
-      <Modal visible={showLearned} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t.wordsLearnedTitle}</Text>
-              <TouchableOpacity onPress={() => setShowLearned(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSub}>{totalKnown} {t.wordsMasteredSoFar}</Text>
-            {loadingLearned ? (
-              <View style={styles.modalState}>
-                <Text style={styles.modalStateText}>{t.loading}</Text>
-              </View>
-            ) : learnedWords.length === 0 ? (
-              <View style={styles.modalState}>
-                <Text style={styles.modalStateText}>{t.noWordsYet}</Text>
-                <Text style={styles.modalHint}>{t.completeFlashcards}</Text>
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {learnedWords.map((item, index) => (
-                  <View key={index} style={styles.learnedRow}>
-                    <Text style={styles.learnedChinese}>{item.words?.chinese}</Text>
-                    <View style={styles.learnedInfo}>
-                      <Text style={styles.learnedEnglish} numberOfLines={1}>{item.words?.english}</Text>
-                      <Text style={styles.learnedPinyin} numberOfLines={1}>{item.words?.pinyin}</Text>
-                    </View>
-                    <View style={styles.learnedBadge}>
-                      <Text style={styles.learnedBadgeText}>✓</Text>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+        <UpdateChecker />
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </View>
   );
 }
@@ -423,32 +391,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 12, borderRadius: 18,
   },
   recommendationBadgeText: { fontSize: 16, fontWeight: '800', color: AppPalette.text },
-  modalOverlay: { flex: 1, backgroundColor: AppPalette.overlay, justifyContent: 'flex-end' },
-  modal: {
-    backgroundColor: AppPalette.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, paddingBottom: 48, maxHeight: '80%',
-  },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: AppPalette.text },
-  modalClose: { fontSize: 18, color: AppPalette.textMuted, padding: 4 },
-  modalSub: { fontSize: 13, color: AppPalette.textMuted, marginBottom: 20 },
-  modalState: { paddingVertical: 40, alignItems: 'center' },
-  modalStateText: { color: AppPalette.textMuted, fontSize: 15, textAlign: 'center' },
-  modalHint: { color: AppPalette.textFaint, fontSize: 13, marginTop: 4, textAlign: 'center' },
-  learnedRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: AppPalette.surface, borderRadius: 12,
-    padding: 14, marginBottom: 8, gap: 12,
-  },
-  learnedChinese: { fontSize: 22, fontWeight: '800', color: AppPalette.text, minWidth: 48, maxWidth: 80, textAlign: 'center' },
-  learnedInfo: { flex: 1 },
-  learnedEnglish: { fontSize: 15, fontWeight: '600', color: AppPalette.text },
-  learnedPinyin: { fontSize: 12, color: AppPalette.accentSoft, marginTop: 2 },
-  learnedBadge: {
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: AppPalette.tintStrong,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  learnedBadgeText: { color: AppPalette.white, fontSize: 13, fontWeight: '800' },
 });
