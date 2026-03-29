@@ -10,14 +10,14 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  PanResponder,
+  Easing,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 type Word = {
   id: string;
@@ -44,7 +44,9 @@ export default function FlashcardScreen() {
   const isAnimating = useRef(false);
 
   const flipAnim = useRef(new Animated.Value(0)).current;
-  const swipeAnim = useRef(new Animated.Value(0)).current;
+  const cardTranslateX = useRef(new Animated.Value(0)).current;
+  const cardOpacity = useRef(new Animated.Value(1)).current;
+  const cardScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     async function setup() {
@@ -70,14 +72,15 @@ export default function FlashcardScreen() {
       toValue: flipped ? 0 : 1,
       friction: 8,
       tension: 40,
-      useNativeDriver: true, // Здесь Native Driver безопасен, так как нет жестов
+      useNativeDriver: true,
     }).start();
     setFlipped(!flipped);
   };
 
-  const swipeCard = (isKnown: boolean) => {
+  const finalizeAnswer = (isKnown: boolean) => {
     if (isAnimating.current || words.length === 0) return;
     isAnimating.current = true;
+    const direction = isKnown ? 1 : -1;
 
     const currentWord = words[index];
     if (currentWord && deviceId) {
@@ -85,15 +88,26 @@ export default function FlashcardScreen() {
       pushProgressToServer(deviceId, currentWord.id, isKnown);
     }
 
-    const toValue = isKnown ? width * 1.5 : -width * 1.5;
-
-    Animated.timing(swipeAnim, {
-      toValue,
-      duration: 300,
-      // ИСПРАВЛЕНИЕ 1: Отключаем аппаратное ускорение для синхронизации с JS-потоком PanResponder
-      useNativeDriver: false, 
-    }).start(() => {
-      swipeAnim.setValue(0);
+    Animated.parallel([
+      Animated.timing(cardTranslateX, {
+        toValue: direction * 64,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardOpacity, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardScale, {
+        toValue: 0.94,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       flipAnim.setValue(0);
       setFlipped(false);
 
@@ -101,51 +115,43 @@ export default function FlashcardScreen() {
 
       if (index >= words.length - 1) {
         setFinished(true);
-      } else {
-        setIndex(prev => prev + 1);
+        isAnimating.current = false;
+        return;
       }
 
-      setTimeout(() => {
+      setIndex(prev => prev + 1);
+
+      cardTranslateX.setValue(-direction * 40);
+      cardOpacity.setValue(0);
+      cardScale.setValue(0.96);
+
+      Animated.parallel([
+        Animated.spring(cardTranslateX, {
+          toValue: 0,
+          speed: 20,
+          bounciness: 6,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardOpacity, {
+          toValue: 1,
+          duration: 240,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(cardScale, {
+          toValue: 1,
+          speed: 20,
+          bounciness: 4,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
         isAnimating.current = false;
-      }, 50);
+      });
     });
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, { dx, dy }) => 
-        !isAnimating.current && Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy),
-      onPanResponderMove: (_, { dx }) => {
-        swipeAnim.setValue(dx);
-      },
-      onPanResponderRelease: (_, { dx, vx }) => {
-        const swipeThreshold = 120;
-        const velocityThreshold = 0.5;
-
-        if (dx > swipeThreshold || vx > velocityThreshold) {
-          swipeCard(true);
-        } else if (dx < -swipeThreshold || vx < -velocityThreshold) {
-          swipeCard(false);
-        } else {
-          Animated.spring(swipeAnim, {
-            toValue: 0,
-            // ИСПРАВЛЕНИЕ 2: Также отключаем Native Driver при возврате карточки
-            useNativeDriver: false, 
-            bounciness: 10
-          }).start();
-        }
-      },
-    })
-  ).current;
-
   const frontInterpolate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
   const backInterpolate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
-  const rotate = swipeAnim.interpolate({ 
-    inputRange: [-width / 2, 0, width / 2], 
-    outputRange: ['-10deg', '0deg', '10deg'],
-    extrapolate: 'clamp'
-  });
 
   if (loading) {
     return (
@@ -208,15 +214,13 @@ export default function FlashcardScreen() {
 
       <View style={styles.progressBarBg}><View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} /></View>
 
-      <View style={styles.hintsRow}>
-        <Text style={styles.hintLeft}>← {t.stillLearning}</Text>
-        <Text style={styles.hintRight}>{t.iKnowThis} →</Text>
-      </View>
-
       <View style={styles.cardWrapper}>
         <Animated.View 
-          style={[{ flex: 1, transform: [{ translateX: swipeAnim }, { rotate }] }]} 
-          {...panResponder.panHandlers}
+          style={{
+            flex: 1,
+            opacity: cardOpacity,
+            transform: [{ translateX: cardTranslateX }, { scale: cardScale }],
+          }}
         >
           {/* Front */}
           <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }], zIndex: flipped ? 0 : 1 }]}>
@@ -242,11 +246,11 @@ export default function FlashcardScreen() {
       </View>
 
       <View style={styles.buttonsRow}>
-        <TouchableOpacity style={[styles.actionButton, styles.actionButtonLeft]} onPress={() => swipeCard(false)}>
+        <TouchableOpacity style={[styles.actionButton, styles.actionButtonLeft]} onPress={() => finalizeAnswer(false)}>
           <Text style={styles.actionButtonIcon}>✕</Text>
           <Text style={styles.actionButtonLabel}>{t.stillLearning}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.actionButtonRight]} onPress={() => swipeCard(true)}>
+        <TouchableOpacity style={[styles.actionButton, styles.actionButtonRight]} onPress={() => finalizeAnswer(true)}>
           <Text style={styles.actionButtonIcon}>✓</Text>
           <Text style={styles.actionButtonLabel}>{t.iKnowThis}</Text>
         </TouchableOpacity>
@@ -269,9 +273,6 @@ const styles = StyleSheet.create({
   knownText: { color: AppPalette.success, fontSize: 14, fontWeight: '700' },
   progressBarBg: { height: 3, backgroundColor: AppPalette.surfaceSoft, borderRadius: 2, marginBottom: 16, overflow: 'hidden' },
   progressBarFill: { height: 3, borderRadius: 2 },
-  hintsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  hintLeft: { color: AppPalette.danger, fontSize: 12, fontWeight: '600' },
-  hintRight: { color: AppPalette.success, fontSize: 12, fontWeight: '600' },
   cardWrapper: { flex: 1, marginBottom: 20 },
   card: { position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: AppPalette.border, backgroundColor: AppPalette.bgElevated },
   cardBack: { backgroundColor: AppPalette.bgElevated },
