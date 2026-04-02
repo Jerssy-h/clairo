@@ -1,4 +1,3 @@
-import { AppPalette } from '@/constants/theme';
 import * as Updates from 'expo-updates';
 import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
@@ -8,20 +7,24 @@ export function UpdateChecker() {
       const update = await Updates.checkForUpdateAsync();
 
       if (update.isAvailable) {
-        Alert.alert('🎉 Новая версия!', 'Доступно обновление. Установить сейчас?', [
-          { text: 'Позже', style: 'cancel' },
-          {
-            text: 'Установить',
-            onPress: async () => {
-              await Updates.fetchUpdateAsync();
-              await Updates.reloadAsync();
-            },
-          },
-        ]);
+        Alert.alert(
+          '🎉 Новая версия!',
+          'Доступно обновление. Установить сейчас?',
+          [
+            { text: 'Позже', style: 'cancel' },
+            {
+              text: 'Установить',
+              onPress: async () => {
+                await Updates.fetchUpdateAsync();
+                await Updates.reloadAsync();
+              }
+            }
+          ]
+        );
       } else {
         Alert.alert('✅ Всё актуально', 'У вас последняя версия.');
       }
-    } catch {
+    } catch (e) {
       Alert.alert('Ошибка', 'Не удалось проверить обновления.');
     }
   };
@@ -36,16 +39,14 @@ export function UpdateChecker() {
 const styles = StyleSheet.create({
   button: {
     padding: 12,
-    backgroundColor: AppPalette.surface,
-    borderRadius: 14,
+    backgroundColor: '#124551',
+    borderRadius: 30,
     alignItems: 'center',
     margin: 16,
-    borderWidth: 1,
-    borderColor: AppPalette.border,
   },
   text: {
-    color: AppPalette.textSoft,
-    fontWeight: '700',
-    fontSize: 14,
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
