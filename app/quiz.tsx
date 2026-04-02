@@ -25,8 +25,7 @@ function shuffle<T>(array: T[]): T[] {
 export default function QuizScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
-  const color = (topicColor as string) || '#7C3AED';
+  const { topicId, topicTitle } = useLocalSearchParams();
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,7 +184,7 @@ export default function QuizScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <ActivityIndicator color={AppPalette.white} size="large" />
       </LinearGradient>
     );
@@ -193,7 +192,7 @@ export default function QuizScreen() {
 
   if (words.length < 4) {
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>问</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>{t.need4Words}</Text>
@@ -210,7 +209,7 @@ export default function QuizScreen() {
     const total = correct + wrong;
     const percentage = Math.round((correct / total) * 100);
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <Text style={styles.finishedEmoji}>
           {percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}
         </Text>
@@ -230,7 +229,7 @@ export default function QuizScreen() {
             <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: color }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: AppPalette.tintStrong }]} onPress={() => router.back()}>
           <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -242,7 +241,7 @@ export default function QuizScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[color + 'CC', color + '36', AppPalette.bg]} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[AppPalette.bg, AppPalette.bg]} style={StyleSheet.absoluteFillObject} />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
       <Animated.View style={[styles.headerBlock, { opacity: introHeaderOpacity, transform: [{ translateY: introHeaderTranslateY }] }]}>
@@ -262,7 +261,7 @@ export default function QuizScreen() {
         </View>
 
         <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} />
+          <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: AppPalette.tintStrong }]} />
         </View>
 
         <View style={styles.scoreRow}>
@@ -274,7 +273,7 @@ export default function QuizScreen() {
       <Animated.View style={[styles.card, { opacity: introCardOpacity, transform: [{ translateY: introCardTranslateY }, { scale: introCardScale }] }]}>
         <Text style={styles.questionLabel}>{language === 'ru' ? 'Что это значит?' : 'What does this mean?'}</Text>
         <Text style={styles.cardChinese}>{card.chinese}</Text>
-        <Text style={[styles.cardPinyin, { color }]}>{card.pinyin}</Text>
+        <Text style={[styles.cardPinyin, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
       </Animated.View>
 
       <View style={styles.optionsContainer}>
@@ -301,7 +300,7 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
+  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
   headerBlock: { marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
@@ -327,7 +326,7 @@ const styles = StyleSheet.create({
   optionWrong: { backgroundColor: 'rgba(255,142,158,0.14)', borderColor: AppPalette.danger },
   optionDim: { opacity: 0.4 },
   optionText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.07)', fontWeight: '900', marginBottom: 24 },
   emptyCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border, marginBottom: 24, width: '100%' },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
   emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },

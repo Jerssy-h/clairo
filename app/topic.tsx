@@ -3,7 +3,6 @@ import { getCache, setCache } from '@/lib/cache';
 import { useLanguage } from '@/lib/LanguageContext';
 import { pushRecentTopic } from '@/lib/recent-topics';
 import { supabase } from '@/lib/supabase';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -16,23 +15,6 @@ import {
 
 const { width, height } = Dimensions.get('window');
 const CARD_SIZE = (width - 20 * 2 - 12) / 2;
-
-// смешивание цветов
-const blendHex = (hex: string, target: string, amount: number) => {
-  const normalize = (value: string) => {
-    const raw = value.replace('#', '');
-    return raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw;
-  };
-  const source = normalize(hex);
-  const blend = normalize(target);
-  const mix = (s: number, e: number) => Math.round(s + (e - s) * amount);
-
-  const r = mix(parseInt(source.slice(0, 2), 16), parseInt(blend.slice(0, 2), 16));
-  const g = mix(parseInt(source.slice(2, 4), 16), parseInt(blend.slice(2, 4), 16));
-  const b = mix(parseInt(source.slice(4, 6), 16), parseInt(blend.slice(4, 6), 16));
-
-  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
-};
 
 // hue shift (главная магия)
 const shiftHue = (hex: string, degree: number) => {
@@ -180,11 +162,6 @@ export default function TopicScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[color + 'CC', color + '30', AppPalette.bg, AppPalette.bg]}
-        style={StyleSheet.absoluteFillObject}
-      />
-
       <Text style={styles.bgChar}>{(topicTitle as string)?.[0] || '中'}</Text>
 
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -195,7 +172,7 @@ export default function TopicScreen() {
         <Text style={styles.heroTitle}>{topicTitle}</Text>
 
         <View style={styles.heroMeta}>
-          <View style={[styles.metaBadge, { backgroundColor: color + '33' }]}>
+          <View style={[styles.metaBadge, { backgroundColor: AppPalette.surface }]}>
             <Text style={styles.metaBadgeText}>
               {loading ? '...' : `${wordCount} ${t.words}`}
             </Text>
@@ -209,12 +186,6 @@ export default function TopicScreen() {
         {activities.map((activity) => {
           const locked = wordCount < activity.minWords;
 
-          const base = blendHex(activity.color, '#ffffff', 0.2);
-          const deep = blendHex(activity.color, '#000000', 0.4);
-
-          const activityBase = blendHex(base, AppPalette.bgElevated, 0.2);
-          const activityShade = blendHex(deep, AppPalette.bg, 0.6);
-
           return (
             <TouchableOpacity
               key={activity.id}
@@ -222,12 +193,7 @@ export default function TopicScreen() {
               onPress={() => handleActivity(activity.id, activity.minWords)}
               activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={[activityBase, activityShade]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
+              <View style={[styles.activityStripe, { backgroundColor: activity.color }]} />
 
               <Text style={styles.cardBgIcon}>{activity.icon}</Text>
 
@@ -256,7 +222,7 @@ const styles = StyleSheet.create({
   bgChar: {
     position: 'absolute',
     fontSize: 300,
-    color: 'rgba(255,255,255,0.05)',
+    color: 'rgba(255,255,255,0.03)',
     fontWeight: '900',
     top: height * 0.04,
     alignSelf: 'center',
@@ -319,17 +285,21 @@ const styles = StyleSheet.create({
   gridCard: {
     width: CARD_SIZE,
     height: CARD_SIZE,
-    borderRadius: 24,
+    borderRadius: 18,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: AppPalette.bgElevated,
+    borderWidth: 1,
+    borderColor: AppPalette.border,
   },
+  activityStripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, opacity: 0.72 },
 
   cardBgIcon: {
     position: 'absolute',
     bottom: -16,
     right: -8,
     fontSize: 96,
-    color: 'rgba(255,255,255,0.12)',
+    color: 'rgba(255,255,255,0.05)',
     fontWeight: '900',
     lineHeight: 110,
   },
@@ -365,7 +335,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(11,16,32,0.4)',
+    backgroundColor: 'rgba(9,13,17,0.55)',
   },
 
   lockIcon: {

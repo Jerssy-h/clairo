@@ -30,8 +30,7 @@ type Word = {
 export default function FlashcardScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
-  const color = (topicColor as string) || '#7C3AED';
+  const { topicId, topicTitle } = useLocalSearchParams();
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,7 +154,7 @@ export default function FlashcardScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <ActivityIndicator color={AppPalette.white} size="large" />
       </LinearGradient>
     );
@@ -165,7 +164,7 @@ export default function FlashcardScreen() {
     if (finished) {
        const percentage = Math.round((known / words.length) * 100);
        return (
-         <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+         <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
            <Text style={styles.finishedEmoji}>{percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}</Text>
            <Text style={styles.finishedTitle}>{t.sessionComplete}</Text>
            <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
@@ -174,14 +173,14 @@ export default function FlashcardScreen() {
              <View style={styles.resultBox}><Text style={styles.resultNumber}>{words.length - known}</Text><Text style={styles.resultLabel}>{t.learning}</Text></View>
              <View style={styles.resultBox}><Text style={styles.resultNumber}>{percentage}%</Text><Text style={styles.resultLabel}>{t.score}</Text></View>
            </View>
-           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: color }]} onPress={() => router.back()}>
+           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: AppPalette.tintStrong }]} onPress={() => router.back()}>
              <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
            </TouchableOpacity>
          </LinearGradient>
        );
     }
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>学</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>{t.noWordsYet}</Text>
@@ -200,7 +199,7 @@ export default function FlashcardScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[color + 'CC', color + '36', AppPalette.bg]} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[AppPalette.bg, AppPalette.bg]} style={StyleSheet.absoluteFillObject} />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
       <View style={styles.header}>
@@ -212,7 +211,7 @@ export default function FlashcardScreen() {
         <View style={styles.knownPill}><Text style={styles.knownText}>✓ {known}</Text></View>
       </View>
 
-      <View style={styles.progressBarBg}><View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: color }]} /></View>
+      <View style={styles.progressBarBg}><View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: AppPalette.tintStrong }]} /></View>
 
       <View style={styles.cardWrapper}>
         <Animated.View 
@@ -225,20 +224,20 @@ export default function FlashcardScreen() {
           {/* Front */}
           <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }], zIndex: flipped ? 0 : 1 }]}>
             <TouchableOpacity style={styles.cardInner} onPress={flipCard} activeOpacity={1}>
-              <LinearGradient colors={[color + '33', AppPalette.bgElevated]} style={StyleSheet.absoluteFillObject} />
+              <LinearGradient colors={[AppPalette.surface, AppPalette.bgElevated]} style={StyleSheet.absoluteFillObject} />
               <Text style={styles.tapHint}>{t.tapToFlip}</Text>
               <Text style={styles.chineseText}>{card.chinese}</Text>
-              <Text style={[styles.pinyinText, { color }]}>{card.pinyin}</Text>
+              <Text style={[styles.pinyinText, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
             </TouchableOpacity>
           </Animated.View>
 
           {/* Back */}
           <Animated.View style={[styles.card, styles.cardBack, { transform: [{ rotateY: backInterpolate }], position: 'absolute' }]}>
             <TouchableOpacity style={styles.cardInner} onPress={flipCard} activeOpacity={1}>
-              <LinearGradient colors={[color + '44', AppPalette.bgElevated]} style={StyleSheet.absoluteFillObject} />
+              <LinearGradient colors={[AppPalette.surfaceSoft, AppPalette.bgElevated]} style={StyleSheet.absoluteFillObject} />
               <Text style={styles.tapHint}>{t.tapToFlip}</Text>
               <Text style={styles.chineseSmall}>{card.chinese}</Text>
-              <Text style={[styles.pinyinSmall, { color }]}>{card.pinyin}</Text>
+              <Text style={[styles.pinyinSmall, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
               <Text style={styles.meaningText}>{meaning}</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -262,7 +261,7 @@ export default function FlashcardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
+  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
   backArrow: { color: AppPalette.text, fontSize: 18 },
@@ -289,7 +288,7 @@ const styles = StyleSheet.create({
   actionButtonRight: { backgroundColor: 'rgba(126,224,161,0.12)', borderColor: AppPalette.success },
   actionButtonIcon: { fontSize: 24, fontWeight: '900', color: AppPalette.text, marginBottom: 4 },
   actionButtonLabel: { fontSize: 12, fontWeight: '600', color: AppPalette.textMuted },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.07)', fontWeight: '900', marginBottom: 24 },
   emptyCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border, marginBottom: 24, width: '100%' },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
   emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },

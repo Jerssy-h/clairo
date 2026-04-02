@@ -229,7 +229,7 @@ function CharacterWriter({
           onPress={handlePeek}
           disabled={peeking}
         >
-          <Text style={[styles.peekBtnText, { color }]}>
+          <Text style={[styles.peekBtnText, { color: AppPalette.tintStrong }]}>
             {peeking ? '👁 Показывается…' : '👁 Показать на 3 сек'}
           </Text>
         </TouchableOpacity>
@@ -356,7 +356,7 @@ export default function StrokeScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[color, color + '66', AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <ActivityIndicator color={AppPalette.white} size="large" />
       </LinearGradient>
     );
@@ -364,7 +364,7 @@ export default function StrokeScreen() {
 
   if (words.length === 0) {
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>笔</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>
@@ -380,12 +380,12 @@ export default function StrokeScreen() {
 
   if (allDone) {
     return (
-      <LinearGradient colors={[color, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
         <Text style={styles.doneEmoji}>🏆</Text>
         <Text style={styles.doneTitle}>
           {language === 'ru' ? 'Все иероглифы пройдены!' : 'All characters done!'}
         </Text>
-        <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: color }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: AppPalette.tintStrong }]} onPress={() => router.back()}>
           <Text style={styles.btnPrimaryText}>
             {language === 'ru' ? '← К темам' : '← Back to Topics'}
           </Text>
@@ -412,7 +412,7 @@ export default function StrokeScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[color + 'CC', color + '36', AppPalette.bg]}
+        colors={[AppPalette.bg, AppPalette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
       <Text style={styles.bgChar}>{char}</Text>
@@ -441,7 +441,7 @@ export default function StrokeScreen() {
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, {
           width: `${((index + 1) / words.length) * 100}%`,
-          backgroundColor: color,
+          backgroundColor: AppPalette.tintStrong,
         }]} />
       </View>
 
@@ -453,7 +453,7 @@ export default function StrokeScreen() {
             ? (language === 'ru' ? 'Слова подряд' : 'Word review')
             : (language === 'ru' ? 'Пропись иероглифа' : 'Practicing character')} {activeCharacterIndex + 1}/{characters.length}: {char}
         </Text>
-        <Text style={[styles.pinyinText, { color }]}>{card.pinyin}</Text>
+        <Text style={[styles.pinyinText, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
         <Text style={styles.meaningText}>{meaning}</Text>
       </View>
 
@@ -465,8 +465,8 @@ export default function StrokeScreen() {
               key={i}
               style={[
                 styles.roundDot,
-                i < round && { backgroundColor: color },
-                i === round && { backgroundColor: color, transform: [{ scale: 1.3 }] },
+                i < round && { backgroundColor: AppPalette.tintStrong },
+                i === round && { backgroundColor: AppPalette.tintStrong, transform: [{ scale: 1.3 }] },
               ]}
             />
           ))}
@@ -499,7 +499,7 @@ export default function StrokeScreen() {
       {phase === 'watch' && (
         <View style={styles.buttons}>
           <TouchableOpacity
-            style={[styles.btnPrimary, { backgroundColor: color }]}
+            style={[styles.btnPrimary, { backgroundColor: AppPalette.tintStrong }]}
             onPress={() => { setPhase('practice'); setRound(0); }}
           >
             <Text style={styles.btnPrimaryText}>
@@ -522,7 +522,7 @@ export default function StrokeScreen() {
         <View style={styles.navDots}>
           {words.slice(0, 7).map((_, i) => (
             <TouchableOpacity key={i} onPress={() => goTo(i)}>
-              <View style={[styles.dot, i === index && { backgroundColor: color, width: 16 }]} />
+              <View style={[styles.dot, i === index && { backgroundColor: AppPalette.tintStrong, width: 16 }]} />
             </TouchableOpacity>
           ))}
           {words.length > 7 && <Text style={styles.dotsMore}>…</Text>}
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bgChar: {
-    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.05)',
+    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)',
     fontWeight: '900', top: height * 0.1, alignSelf: 'center', lineHeight: 340,
   },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   navDots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: AppPalette.borderStrong },
   dotsMore: { color: AppPalette.textFaint, fontSize: 12 },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.16)', fontWeight: '900', marginBottom: 24 },
+  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.07)', fontWeight: '900', marginBottom: 24 },
   emptyCard: {
     backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28,
     alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border,

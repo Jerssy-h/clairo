@@ -10,42 +10,47 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { language } = useLanguage();
 
-  // Оптимизация по Фейнману: вычисляем только при смене языка
-  const labels = useMemo(() => ({
-    home: language === 'ru' ? 'Главная' : 'Home',
-    topics: language === 'ru' ? 'Темы' : 'Topics',
-  }), [language]);
+  const labels = useMemo(
+    () => ({
+      home: language === 'ru' ? 'Главная' : 'Home',
+      topics: language === 'ru' ? 'Темы' : 'Topics',
+    }),
+    [language]
+  );
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: AppPalette.textFaint,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
         tabBarStyle: {
           backgroundColor: AppPalette.bgElevated,
           borderTopColor: AppPalette.border,
-          height: 66,
+          borderTopWidth: 1,
+          height: 68,
           paddingTop: 8,
+          paddingBottom: 10,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: labels.home,
-          // ФИКС: Явно указываем, что color — это string
-          tabBarIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }: { color: string }) => <IconSymbol size={24} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="topics"
         options={{
           title: labels.topics,
-          // ФИКС: Явно указываем тип
           tabBarIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={28} name="square.grid.2x2.fill" color={color} />
+            <IconSymbol size={24} name="square.grid.2x2.fill" color={color} />
           ),
         }}
       />
