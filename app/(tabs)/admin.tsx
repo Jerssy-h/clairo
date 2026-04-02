@@ -1,3 +1,4 @@
+import { AppPalette } from '@/constants/theme';
 import { isAdmin } from '@/lib/auth';
 import { clearCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
@@ -354,7 +355,7 @@ export default function AdminScreen() {
         <TextInput
           style={[styles.input, passwordError && styles.inputError]}
           placeholder="Password"
-          placeholderTextColor="#555"
+          placeholderTextColor={AppPalette.textFaint}
           value={passwordInput}
           onChangeText={setPasswordInput}
           secureTextEntry
@@ -397,14 +398,14 @@ export default function AdminScreen() {
             <TextInput
               style={styles.input}
               placeholder="Title"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={topicTitle}
               onChangeText={setTopicTitle}
             />
             <TextInput
               style={styles.input}
               placeholder="Emoji"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={topicEmoji}
               onChangeText={setTopicEmoji}
             />
@@ -466,28 +467,28 @@ export default function AdminScreen() {
             <TextInput
               style={styles.input}
               placeholder="Chinese (e.g. 你好)"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={chinese}
               onChangeText={setChinese}
             />
             <TextInput
               style={styles.input}
               placeholder="Pinyin (e.g. nǐ hǎo)"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={pinyin}
               onChangeText={setPinyin}
             />
             <TextInput
               style={styles.input}
               placeholder="English (e.g. Hello)"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={english}
               onChangeText={setEnglish}
             />
             <TextInput
               style={styles.input}
               placeholder="Russian (e.g. Привет)"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={wordRussian}
               onChangeText={setWordRussian}
             />
@@ -545,18 +546,18 @@ export default function AdminScreen() {
             <TextInput
               style={styles.input}
               placeholder="Russian sentence"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={russian}
               onChangeText={setRussian}
             />
             <TextInput
               style={styles.input}
               placeholder="Chinese words (space separated, correct order)"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
               value={chineseWords}
               onChangeText={setChineseWords}
             />
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#059669' }]} onPress={addSentence} disabled={loading}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: AppPalette.success }]} onPress={addSentence} disabled={loading}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Sentence</Text>}
             </TouchableOpacity>
 
@@ -601,14 +602,14 @@ export default function AdminScreen() {
               value={editTopic?.title}
               onChangeText={v => setEditTopic(e => e ? { ...e, title: v } : null)}
               placeholder="Title"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editTopic?.emoji}
               onChangeText={v => setEditTopic(e => e ? { ...e, emoji: v } : null)}
               placeholder="Emoji"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <View style={styles.colorRow}>
               {COLORS.map(c => (
@@ -641,28 +642,28 @@ export default function AdminScreen() {
               value={editWord?.chinese}
               onChangeText={v => setEditWord(e => e ? { ...e, chinese: v } : null)}
               placeholder="Chinese"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editWord?.pinyin}
               onChangeText={v => setEditWord(e => e ? { ...e, pinyin: v } : null)}
               placeholder="Pinyin"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editWord?.english}
               onChangeText={v => setEditWord(e => e ? { ...e, english: v } : null)}
               placeholder="English"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editWord?.russian}
               onChangeText={v => setEditWord(e => e ? { ...e, russian: v } : null)}
               placeholder="Russian"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setEditWord(null)}>
@@ -686,20 +687,20 @@ export default function AdminScreen() {
               value={editSentence?.russian}
               onChangeText={v => setEditSentence(e => e ? { ...e, russian: v } : null)}
               placeholder="Russian sentence"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editSentence?.correct_order.join(' ')}
               onChangeText={v => setEditSentence(e => e ? { ...e, correct_order: v.split(' ').filter(w => w.trim() !== '') } : null)}
               placeholder="Chinese words (space separated)"
-              placeholderTextColor="#555"
+              placeholderTextColor={AppPalette.textFaint}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setEditSentence(null)}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, { backgroundColor: '#059669' }]} onPress={updateSentence} disabled={loading}>
+              <TouchableOpacity style={[styles.btn, { backgroundColor: AppPalette.success }]} onPress={updateSentence} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
               </TouchableOpacity>
             </View>
@@ -711,45 +712,45 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0F0F' },
-  authContainer: { flex: 1, backgroundColor: '#0F0F0F', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  container: { flex: 1, backgroundColor: AppPalette.bg },
+  authContainer: { flex: 1, backgroundColor: AppPalette.bg, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   authEmoji: { fontSize: 48, marginBottom: 16 },
-  authTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 24 },
+  authTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 24 },
   header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
-  title: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
+  title: { fontSize: 32, fontWeight: '800', color: AppPalette.text },
   tabBar: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: '#1A1A1A' },
-  tabBtnActive: { backgroundColor: '#4F46E5' },
-  tabText: { color: '#888', fontSize: 14, fontWeight: '600' },
-  tabTextActive: { color: '#FFFFFF' },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: AppPalette.bgElevated },
+  tabBtnActive: { backgroundColor: AppPalette.tintStrong },
+  tabText: { color: AppPalette.textMuted, fontSize: 14, fontWeight: '600' },
+  tabTextActive: { color: AppPalette.text },
   scroll: { flex: 1 },
   section: { paddingHorizontal: 20, paddingBottom: 40 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#888', letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },
-  input: { backgroundColor: '#1A1A1A', borderRadius: 10, padding: 14, color: '#FFFFFF', fontSize: 16, marginBottom: 10, borderWidth: 1, borderColor: '#2A2A2A' },
-  inputError: { borderColor: '#FF4444' },
-  errorText: { color: '#FF4444', fontSize: 13, marginBottom: 10 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: AppPalette.textMuted, letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },
+  input: { backgroundColor: AppPalette.bgElevated, borderRadius: 10, padding: 14, color: AppPalette.text, fontSize: 16, marginBottom: 10, borderWidth: 1, borderColor: AppPalette.border },
+  inputError: { borderColor: AppPalette.danger },
+  errorText: { color: AppPalette.danger, fontSize: 13, marginBottom: 10 },
   colorRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   colorDot: { width: 28, height: 28, borderRadius: 14 },
-  colorSelected: { borderWidth: 3, borderColor: '#FFFFFF' },
-  btn: { backgroundColor: '#4F46E5', borderRadius: 10, padding: 14, alignItems: 'center' },
-  btnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', borderRadius: 10, padding: 12, marginBottom: 8, gap: 10 },
+  colorSelected: { borderWidth: 3, borderColor: AppPalette.text },
+  btn: { backgroundColor: AppPalette.tintStrong, borderRadius: 10, padding: 14, alignItems: 'center' },
+  btnText: { color: AppPalette.text, fontSize: 15, fontWeight: '700' },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: AppPalette.bgElevated, borderRadius: 10, padding: 12, marginBottom: 8, gap: 10 },
   rowAccent: { width: 3, height: 24, borderRadius: 2 },
   rowEmoji: { fontSize: 18 },
-  rowTitle: { flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-  rowChinese: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
-  rowPinyin: { color: '#888', fontSize: 12, marginTop: 2 },
+  rowTitle: { flex: 1, color: AppPalette.text, fontSize: 15, fontWeight: '600' },
+  rowChinese: { color: AppPalette.text, fontSize: 18, fontWeight: '700' },
+  rowPinyin: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
   rowActions: { flexDirection: 'row', gap: 4 },
   iconBtn: { padding: 6 },
   iconBtnText: { fontSize: 16 },
-  chip: { backgroundColor: '#1A1A1A', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: '#2A2A2A' },
-  chipSelected: { borderColor: '#4F46E5', backgroundColor: '#1a1a3a' },
-  chipText: { color: '#FFFFFF', fontSize: 14 },
-  emptyText: { color: '#555', fontSize: 14, textAlign: 'center', paddingVertical: 20 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#1A1A1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginBottom: 20 },
+  chip: { backgroundColor: AppPalette.bgElevated, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: AppPalette.border },
+  chipSelected: { borderColor: AppPalette.tintStrong, backgroundColor: AppPalette.surface },
+  chipText: { color: AppPalette.text, fontSize: 14 },
+  emptyText: { color: AppPalette.textFaint, fontSize: 14, textAlign: 'center', paddingVertical: 20 },
+  modalOverlay: { flex: 1, backgroundColor: AppPalette.overlay, justifyContent: 'flex-end' },
+  modal: { backgroundColor: AppPalette.bgElevated, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 20 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  modalCancel: { flex: 1, backgroundColor: '#2A2A2A', borderRadius: 10, padding: 14, alignItems: 'center' },
-  modalCancelText: { color: '#888', fontSize: 15, fontWeight: '600' },
+  modalCancel: { flex: 1, backgroundColor: AppPalette.surfaceSoft, borderRadius: 10, padding: 14, alignItems: 'center' },
+  modalCancelText: { color: AppPalette.textMuted, fontSize: 15, fontWeight: '600' },
 });

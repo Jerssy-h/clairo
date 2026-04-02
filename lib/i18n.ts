@@ -92,8 +92,8 @@ export const translations = {
   },
   ru: {
     // Flashcards & Learning (Missing keys fixed)
-    iKnowThis: 'Я это знаю',
-    stillLearning: 'Ещё учу',
+    iKnowThis: 'Знаю',
+    stillLearning: 'Учу',
     learning: 'Изучаю',
     tapToFlip: 'Нажми, чтобы перевернуть',
 
