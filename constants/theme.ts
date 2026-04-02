@@ -1,65 +1,56 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#7C6CFF';
-const tintColorDark = '#C9C2FF';
+const tintColorLight = '#5A6B7E';
+const tintColorDark = '#C4CED9';
 
 export const Colors = {
   light: {
-    text: '#1F1B2E',
-    background: '#F8F7FF',
+    text: '#1F2A36',
+    background: '#F3F5F7',
     tint: tintColorLight,
-    icon: '#7A7595',
-    tabIconDefault: '#7A7595',
+    icon: '#7A8794',
+    tabIconDefault: '#8A95A1',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#F4F1FF',
-    background: '#0F1020',
+    text: '#E6EBF0',
+    background: '#10161D',
     tint: tintColorDark,
-    icon: '#A7A2C3',
-    tabIconDefault: '#7E7A98',
+    icon: '#9AA9B7',
+    tabIconDefault: '#7F8B97',
     tabIconSelected: tintColorDark,
   },
 };
 
 export const AppPalette = {
-  bg: '#0B1020',
-  bgElevated: '#131A31',
-  surface: '#18213D',
-  surfaceSoft: '#1F2948',
-  card: '#202B4D',
-  border: 'rgba(189, 182, 255, 0.16)',
-  borderStrong: 'rgba(201, 194, 255, 0.24)',
-  text: '#F6F4FF',
-  textSoft: '#C5C0E4',
-  textMuted: '#9B96B8',
-  textFaint: '#7D7897',
-  tint: '#9B8CFF',
-  tintStrong: '#7C6CFF',
-  accent: '#6FD6C7',
-  accentSoft: '#9AE6DA',
-  success: '#7EE0A1',
-  danger: '#FF8E9E',
-  warning: '#FFC978',
-  overlay: 'rgba(8, 11, 24, 0.82)',
+  bg: '#10161D',
+  bgElevated: '#161E27',
+  surface: '#1B2530',
+  surfaceSoft: '#24303D',
+  card: '#212C37',
+  border: 'rgba(184, 196, 208, 0.16)',
+  borderStrong: 'rgba(184, 196, 208, 0.28)',
+  text: '#E6EBF0',
+  textSoft: '#C5D0DA',
+  textMuted: '#99A8B5',
+  textFaint: '#7F8D99',
+  tint: '#8FA0B2',
+  tintStrong: '#6F8398',
+  accent: '#8CAFA3',
+  accentSoft: '#B6D1C8',
+  success: '#7DAE96',
+  danger: '#C97C84',
+  warning: '#C7A773',
+  overlay: 'rgba(9, 13, 17, 0.84)',
   topicTrack: 'rgba(255,255,255,0.22)',
   white: '#FFFFFF',
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
