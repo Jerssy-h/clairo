@@ -17,7 +17,7 @@ export default function PracticeHero({
   title,
   subtitle,
   backgroundChar,
-  accentColor,
+  accentColor: _accentColor,
   badges,
 }: Props) {
   const router = useRouter();
@@ -32,12 +32,11 @@ export default function PracticeHero({
 
       <View style={[styles.heroCard, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}>
         <LinearGradient
-          colors={[`${accentColor}08`, palette.bgElevated]}
+          colors={[palette.bgElevated, palette.bgElevated]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        <View style={[styles.heroAccent, { backgroundColor: accentColor }]} />
         <Text style={[styles.heroTitle, { color: palette.text, fontFamily: fonts.mono }]}>{title}</Text>
         {subtitle ? <Text style={[styles.heroSubtitle, { color: palette.textMuted, fontFamily: fonts.mono }]}>{subtitle}</Text> : null}
         <View style={styles.badgeRow}>
@@ -81,14 +80,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     marginBottom: 28,
-  },
-  heroAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    opacity: 0.9,
   },
   heroTitle: {
     fontSize: 34,

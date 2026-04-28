@@ -172,8 +172,8 @@ function CharacterWriter({
                 radicalColor={palette.borderStrong}
               />
             )}
-            {/* Correctly drawn strokes appear in topic color */}
-            <HanziWriter.QuizStrokes color={color} />
+            {/* Correctly drawn strokes follow the active theme for clear contrast */}
+            <HanziWriter.QuizStrokes color={palette.text} />
             {/* Mistake flash — blue like the official example, clearly visible */}
             <HanziWriter.QuizMistakeHighlighter color={palette.textMuted} strokeDuration={400} />
           </HanziWriter.Svg>

@@ -254,8 +254,8 @@ export default function FlashcardScreen() {
           <Text style={styles.actionButtonLabel}>{t.stillLearning}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionButton, styles.actionButtonRight]} onPress={() => finalizeAnswer(true)}>
-          <Text style={styles.actionButtonIcon}>✓</Text>
-          <Text style={styles.actionButtonLabel}>{t.iKnowThis}</Text>
+          <Text style={[styles.actionButtonIcon, styles.actionButtonIconInverted]}>✓</Text>
+          <Text style={[styles.actionButtonLabel, styles.actionButtonLabelInverted]}>{t.iKnowThis}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -291,7 +291,9 @@ const createStyles = (palette: any, fonts: any) => StyleSheet.create({
   actionButtonLeft: { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong },
   actionButtonRight: { backgroundColor: palette.text, borderColor: palette.text },
   actionButtonIcon: { fontSize: 20, fontWeight: '700', color: palette.text, marginBottom: 4, fontFamily: fonts.mono },
+  actionButtonIconInverted: { color: palette.bg },
   actionButtonLabel: { fontSize: 11, fontWeight: '600', color: palette.textMuted, fontFamily: fonts.mono, letterSpacing: 0.8 },
+  actionButtonLabelInverted: { color: palette.bg },
   decorChar: { fontSize: 120, color: palette.borderStrong, fontWeight: '900', marginBottom: 24, opacity: 0.4 },
   emptyCard: { backgroundColor: palette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: palette.border, marginBottom: 24, width: '100%' },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: palette.text, marginBottom: 8, textAlign: 'center', fontFamily: fonts.mono },

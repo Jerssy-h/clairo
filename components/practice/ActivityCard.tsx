@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function ActivityCard({
-  color,
+  color: _color,
   icon,
   title,
   subtitle,
@@ -34,12 +34,11 @@ export default function ActivityCard({
       disabled={locked}
     >
       <LinearGradient
-        colors={[`${color}10`, palette.bgElevated]}
+        colors={[palette.bgElevated, palette.bgElevated]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <View style={[styles.activityStripe, { backgroundColor: color }]} />
       <Text style={styles.cardBgIcon}>{icon}</Text>
 
       <View style={styles.cardTopRow}>
@@ -82,20 +81,12 @@ const styles = StyleSheet.create({
   gridCardLocked: {
     opacity: 0.5,
   },
-  activityStripe: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    opacity: 0.82,
-  },
   cardBgIcon: {
     position: 'absolute',
     bottom: -14,
     right: -6,
     fontSize: 100,
-    color: 'rgba(255,255,255,0.05)',
+    color: 'rgba(127,127,127,0.08)',
     fontWeight: '900',
     lineHeight: 112,
   },

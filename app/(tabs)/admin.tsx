@@ -1,4 +1,7 @@
-import { AppPalette } from '@/constants/theme';
+import LanguagePicker from '@/components/LanguagePicker';
+import Logo from '@/components/Logo';
+import ThemeToggle from '@/components/ThemeToggle';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { isAdmin } from '@/lib/auth';
 import { clearCache } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +11,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -44,6 +48,9 @@ const COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#059669', '#D97706', '#DC2626'
 const ADMIN_PASSWORD = process.env.EXPO_PUBLIC_ADMIN_PASSWORD ?? '';
 
 export default function AdminScreen() {
+  const { palette, fonts, isDark } = useAppTheme();
+  const styles = createStyles(palette, fonts);
+
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
@@ -99,32 +106,22 @@ export default function AdminScreen() {
   };
 
   const fetchTopics = async () => {
-    const { data } = await supabase
-      .from('topics')
-      .select('*')
-      .order('sort_order', { ascending: true });
+    const { data } = await supabase.from('topics').select('*').order('sort_order', { ascending: true });
     setTopics(data || []);
   };
 
   const fetchWords = async () => {
     if (!selectedTopic) return;
-    const { data } = await supabase
-      .from('words')
-      .select('*')
-      .eq('topic_id', selectedTopic.id);
+    const { data } = await supabase.from('words').select('*').eq('topic_id', selectedTopic.id);
     setWords(data || []);
   };
 
   const fetchSentences = async () => {
     if (!selectedTopic) return;
-    const { data } = await supabase
-      .from('sentences')
-      .select('*')
-      .eq('topic_id', selectedTopic.id);
+    const { data } = await supabase.from('sentences').select('*').eq('topic_id', selectedTopic.id);
     setSentences(data || []);
   };
 
-  // TOPICS
   const addTopic = async () => {
     if (!topicTitle || !topicEmoji) {
       Alert.alert('Missing fields', 'Please fill in title and emoji');
@@ -150,11 +147,14 @@ export default function AdminScreen() {
   const updateTopic = async () => {
     if (!editTopic) return;
     setLoading(true);
-    const { error } = await supabase.from('topics').update({
-      title: editTopic.title,
-      emoji: editTopic.emoji,
-      color: editTopic.color,
-    }).eq('id', editTopic.id);
+    const { error } = await supabase
+      .from('topics')
+      .update({
+        title: editTopic.title,
+        emoji: editTopic.emoji,
+        color: editTopic.color,
+      })
+      .eq('id', editTopic.id);
     if (error) Alert.alert('Error', error.message);
     else {
       setEditTopic(null);
@@ -168,7 +168,8 @@ export default function AdminScreen() {
     Alert.alert('Delete Topic', 'This will delete the topic and all its content. Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
           await supabase.from('topics').delete().eq('id', id);
           if (selectedTopic?.id === id) {
@@ -193,21 +194,19 @@ export default function AdminScreen() {
     [newTopics[index], newTopics[swapIndex]] = [newTopics[swapIndex], newTopics[index]];
     setTopics(newTopics);
     clearCache('topics');
-    await Promise.all(newTopics.map((t, i) =>
-      supabase.from('topics').update({ sort_order: i }).eq('id', t.id)
-    ));
+    await Promise.all(newTopics.map((t, i) => supabase.from('topics').update({ sort_order: i }).eq('id', t.id)));
   };
 
-  // WORDS
   const addWord = async () => {
-    if (!selectedTopic) { Alert.alert('Select a topic first'); return; }
+    if (!selectedTopic) {
+      Alert.alert('Select a topic first');
+      return;
+    }
     if (!chinese || !pinyin || !english || !wordRussian) {
       Alert.alert('Missing fields', 'Please fill in all fields');
       return;
     }
 
-    // Prevent duplicate Chinese strings inside the same topic.
-    // Sentence Builder relies on mapping `words.chinese -> words.id`.
     const { data: existing } = await supabase
       .from('words')
       .select('id')
@@ -229,7 +228,10 @@ export default function AdminScreen() {
     });
     if (error) Alert.alert('Error', error.message);
     else {
-      setChinese(''); setPinyin(''); setEnglish(''); setWordRussian('');
+      setChinese('');
+      setPinyin('');
+      setEnglish('');
+      setWordRussian('');
       clearCache(`words_${selectedTopic.id}`);
       clearCache(`word_map_${selectedTopic.id}`);
       fetchWords();
@@ -240,7 +242,6 @@ export default function AdminScreen() {
   const updateWord = async () => {
     if (!editWord) return;
 
-    // Prevent duplicate Chinese strings inside the same topic.
     const { data: existing } = await supabase
       .from('words')
       .select('id')
@@ -254,12 +255,15 @@ export default function AdminScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.from('words').update({
-      chinese: editWord.chinese,
-      pinyin: editWord.pinyin,
-      english: editWord.english,
-      russian: editWord.russian,
-    }).eq('id', editWord.id);
+    const { error } = await supabase
+      .from('words')
+      .update({
+        chinese: editWord.chinese,
+        pinyin: editWord.pinyin,
+        english: editWord.english,
+        russian: editWord.russian,
+      })
+      .eq('id', editWord.id);
     if (error) Alert.alert('Error', error.message);
     else {
       setEditWord(null);
@@ -274,7 +278,8 @@ export default function AdminScreen() {
     Alert.alert('Delete Word', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
           await supabase.from('words').delete().eq('id', id);
           if (selectedTopic) {
@@ -287,14 +292,16 @@ export default function AdminScreen() {
     ]);
   };
 
-  // SENTENCES
   const addSentence = async () => {
-    if (!selectedTopic) { Alert.alert('Select a topic first'); return; }
+    if (!selectedTopic) {
+      Alert.alert('Select a topic first');
+      return;
+    }
     if (!russian || !chineseWords) {
       Alert.alert('Missing fields', 'Please fill in all fields');
       return;
     }
-    const wordsArray = chineseWords.split(' ').filter(w => w.trim() !== '');
+    const wordsArray = chineseWords.split(' ').filter((w) => w.trim() !== '');
     if (wordsArray.length < 2) {
       Alert.alert('Too short', 'Add at least 2 Chinese words');
       return;
@@ -308,7 +315,8 @@ export default function AdminScreen() {
     });
     if (error) Alert.alert('Error', error.message);
     else {
-      setRussian(''); setChineseWords('');
+      setRussian('');
+      setChineseWords('');
       clearCache(`sentences_${selectedTopic.id}`);
       fetchSentences();
     }
@@ -319,11 +327,14 @@ export default function AdminScreen() {
     if (!editSentence) return;
     const wordsArray = editSentence.correct_order;
     setLoading(true);
-    const { error } = await supabase.from('sentences').update({
-      russian: editSentence.russian,
-      correct_order: wordsArray,
-      chinese_words: [...wordsArray].sort(() => Math.random() - 0.5),
-    }).eq('id', editSentence.id);
+    const { error } = await supabase
+      .from('sentences')
+      .update({
+        russian: editSentence.russian,
+        correct_order: wordsArray,
+        chinese_words: [...wordsArray].sort(() => Math.random() - 0.5),
+      })
+      .eq('id', editSentence.id);
     if (error) Alert.alert('Error', error.message);
     else {
       setEditSentence(null);
@@ -337,7 +348,8 @@ export default function AdminScreen() {
     Alert.alert('Delete Sentence', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
           await supabase.from('sentences').delete().eq('id', id);
           if (selectedTopic) clearCache(`sentences_${selectedTopic.id}`);
@@ -347,361 +359,377 @@ export default function AdminScreen() {
     ]);
   };
 
+  const renderTopicPicker = () => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+      {topics.map((topic) => {
+        const selected = selectedTopic?.id === topic.id;
+        return (
+          <TouchableOpacity
+            key={topic.id}
+            style={[styles.chip, selected && styles.chipSelected]}
+            onPress={() => setSelectedTopic(topic)}
+          >
+            <Text style={styles.chipText}>{topic.emoji} {topic.title}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
   if (!authenticated) {
     return (
-      <View style={styles.authContainer}>
-        <Text style={styles.authEmoji}>🔐</Text>
-        <Text style={styles.authTitle}>Admin</Text>
-        <TextInput
-          style={[styles.input, passwordError && styles.inputError]}
-          placeholder="Password"
-          placeholderTextColor={AppPalette.textFaint}
-          value={passwordInput}
-          onChangeText={setPasswordInput}
-          secureTextEntry
-          onSubmitEditing={handleLogin}
-        />
-        {passwordError && <Text style={styles.errorText}>Wrong password</Text>}
-        <TouchableOpacity style={styles.btn} onPress={handleLogin}>
-          <Text style={styles.btnText}>Enter</Text>
-        </TouchableOpacity>
+      <View style={styles.authScreen}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <View style={styles.authCard}>
+          <Text style={styles.authMark}>C</Text>
+          <Text style={styles.authTitle}>Admin</Text>
+          <Text style={styles.authCopy}>Private workspace for topics, words and sentence sets.</Text>
+          <TextInput
+            style={[styles.input, passwordError && styles.inputError]}
+            placeholder="Password"
+            placeholderTextColor={palette.textFaint}
+            value={passwordInput}
+            onChangeText={setPasswordInput}
+            secureTextEntry
+            onSubmitEditing={handleLogin}
+          />
+          {passwordError ? <Text style={styles.errorText}>Wrong password</Text> : null}
+          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+            <Text style={styles.primaryButtonText}>Enter</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <View style={styles.topBar}>
+          <View style={styles.brand}>
+            <Logo size={36} />
+            <View>
+              <Text style={styles.brandTitle}>CLAIRO</Text>
+              <Text style={styles.brandMeta}>admin workspace</Text>
+            </View>
+          </View>
+          <View style={styles.controls}>
+            <ThemeToggle />
+            <LanguagePicker />
+          </View>
+        </View>
+
+        <Text style={styles.eyebrow}>PRIVATE</Text>
         <Text style={styles.title}>Admin</Text>
-      </View>
+        <Text style={styles.copy}>Manage topics, vocabulary and sentence sets in one quiet workspace.</Text>
 
-      <View style={styles.tabBar}>
-        {(['topics', 'words', 'sentences'] as const).map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-            onPress={() => setTab(t)}
-          >
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        <View style={styles.tabBar}>
+          {(['topics', 'words', 'sentences'] as const).map((item) => {
+            const active = tab === item;
+            return (
+              <TouchableOpacity key={item} style={[styles.tabButton, active && styles.tabButtonActive]} onPress={() => setTab(item)}>
+                <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{item}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+        {tab === 'topics' ? (
+          <>
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>New topic</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Title"
+                placeholderTextColor={palette.textFaint}
+                value={topicTitle}
+                onChangeText={setTopicTitle}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Emoji"
+                placeholderTextColor={palette.textFaint}
+                value={topicEmoji}
+                onChangeText={setTopicEmoji}
+              />
+              <View style={styles.colorRow}>
+                {COLORS.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[styles.colorDot, { backgroundColor: color }, topicColor === color && styles.colorSelected]}
+                    onPress={() => setTopicColor(color)}
+                  />
+                ))}
+              </View>
+              <TouchableOpacity style={styles.primaryButton} onPress={addTopic} disabled={loading}>
+                {loading ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryButtonText}>Add topic</Text>}
+              </TouchableOpacity>
+            </View>
 
-        {/* TOPICS TAB */}
-        {tab === 'topics' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Add Topic</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Title"
-              placeholderTextColor={AppPalette.textFaint}
-              value={topicTitle}
-              onChangeText={setTopicTitle}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Emoji"
-              placeholderTextColor={AppPalette.textFaint}
-              value={topicEmoji}
-              onChangeText={setTopicEmoji}
-            />
-            <View style={styles.colorRow}>
-              {COLORS.map(c => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.colorDot, { backgroundColor: c }, topicColor === c && styles.colorSelected]}
-                  onPress={() => setTopicColor(c)}
-                />
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Your topics</Text>
+              {topics.map((topic, index) => (
+                <View key={topic.id} style={styles.rowCard}>
+                  <View style={styles.rowMain}>
+                    <Text style={styles.rowEmoji}>{topic.emoji}</Text>
+                    <View style={styles.rowContent}>
+                      <Text style={styles.rowTitle}>{topic.title}</Text>
+                      <Text style={styles.rowSubtext}>sort #{index + 1}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.rowActions}>
+                    <TouchableOpacity onPress={() => moveTopic(index, 'up')} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>UP</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => moveTopic(index, 'down')} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>DN</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setEditTopic(topic)} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>EDIT</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteTopic(topic.id)} style={styles.actionChip}>
+                      <Text style={styles.actionChipText}>DEL</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               ))}
             </View>
-            <TouchableOpacity style={styles.btn} onPress={addTopic} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Topic</Text>}
-            </TouchableOpacity>
+          </>
+        ) : null}
 
-            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Your Topics</Text>
-            {topics.map((t, i) => (
-              <View key={t.id} style={styles.row}>
-                <View style={[styles.rowAccent, { backgroundColor: t.color }]} />
-                <Text style={styles.rowEmoji}>{t.emoji}</Text>
-                <Text style={styles.rowTitle}>{t.title}</Text>
-                <View style={styles.rowActions}>
-                  <TouchableOpacity onPress={() => moveTopic(i, 'up')} style={styles.iconBtn}>
-                    <Text style={styles.iconBtnText}>↑</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => moveTopic(i, 'down')} style={styles.iconBtn}>
-                    <Text style={styles.iconBtnText}>↓</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setEditTopic(t)} style={styles.iconBtn}>
-                    <Text style={styles.iconBtnText}>✏️</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteTopic(t.id)} style={styles.iconBtn}>
-                    <Text style={styles.iconBtnText}>🗑️</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+        {tab === 'words' ? (
+          <>
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Choose topic</Text>
+              {renderTopicPicker()}
+              <Text style={styles.panelTitle}>New word</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Chinese"
+                placeholderTextColor={palette.textFaint}
+                value={chinese}
+                onChangeText={setChinese}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Pinyin"
+                placeholderTextColor={palette.textFaint}
+                value={pinyin}
+                onChangeText={setPinyin}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="English"
+                placeholderTextColor={palette.textFaint}
+                value={english}
+                onChangeText={setEnglish}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Russian"
+                placeholderTextColor={palette.textFaint}
+                value={wordRussian}
+                onChangeText={setWordRussian}
+              />
+              <TouchableOpacity style={styles.primaryButton} onPress={addWord} disabled={loading}>
+                {loading ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryButtonText}>Add word</Text>}
+              </TouchableOpacity>
+            </View>
 
-        {/* WORDS TAB */}
-        {tab === 'words' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Topic</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-              {topics.map(t => (
-                <TouchableOpacity
-                  key={t.id}
-                  style={[styles.chip, selectedTopic?.id === t.id && styles.chipSelected]}
-                  onPress={() => setSelectedTopic(t)}
-                >
-                  <Text style={styles.chipText}>{t.emoji} {t.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.sectionTitle}>Add Word</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Chinese (e.g. 你好)"
-              placeholderTextColor={AppPalette.textFaint}
-              value={chinese}
-              onChangeText={setChinese}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Pinyin (e.g. nǐ hǎo)"
-              placeholderTextColor={AppPalette.textFaint}
-              value={pinyin}
-              onChangeText={setPinyin}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="English (e.g. Hello)"
-              placeholderTextColor={AppPalette.textFaint}
-              value={english}
-              onChangeText={setEnglish}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Russian (e.g. Привет)"
-              placeholderTextColor={AppPalette.textFaint}
-              value={wordRussian}
-              onChangeText={setWordRussian}
-            />
-            <TouchableOpacity style={styles.btn} onPress={addWord} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Word</Text>}
-            </TouchableOpacity>
-
-            {selectedTopic && (
-              <>
-                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-                  Words in &quot;{selectedTopic.title}&quot; ({words.length})
-                </Text>
+            {selectedTopic ? (
+              <View style={styles.panel}>
+                <Text style={styles.panelTitle}>Words in &quot;{selectedTopic.title}&quot;</Text>
                 {words.length === 0 ? (
                   <Text style={styles.emptyText}>No words yet</Text>
                 ) : (
-                  words.map(w => (
-                    <View key={w.id} style={styles.row}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.rowChinese}>{w.chinese}</Text>
-                        <Text style={styles.rowPinyin}>{w.pinyin} · {w.russian || w.english}</Text>
+                  words.map((word) => (
+                    <View key={word.id} style={styles.rowCard}>
+                      <View style={styles.rowContentWide}>
+                        <Text style={styles.rowChinese}>{word.chinese}</Text>
+                        <Text style={styles.rowSubtext}>{word.pinyin} · {word.russian || word.english}</Text>
                       </View>
                       <View style={styles.rowActions}>
-                        <TouchableOpacity onPress={() => setEditWord(w)} style={styles.iconBtn}>
-                          <Text style={styles.iconBtnText}>✏️</Text>
+                        <TouchableOpacity onPress={() => setEditWord(word)} style={styles.actionChip}>
+                          <Text style={styles.actionChipText}>EDIT</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => deleteWord(w.id)} style={styles.iconBtn}>
-                          <Text style={styles.iconBtnText}>🗑️</Text>
+                        <TouchableOpacity onPress={() => deleteWord(word.id)} style={styles.actionChip}>
+                          <Text style={styles.actionChipText}>DEL</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ))
                 )}
-              </>
-            )}
-          </View>
-        )}
+              </View>
+            ) : null}
+          </>
+        ) : null}
 
-        {/* SENTENCES TAB */}
-        {tab === 'sentences' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Topic</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-              {topics.map(t => (
-                <TouchableOpacity
-                  key={t.id}
-                  style={[styles.chip, selectedTopic?.id === t.id && styles.chipSelected]}
-                  onPress={() => setSelectedTopic(t)}
-                >
-                  <Text style={styles.chipText}>{t.emoji} {t.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+        {tab === 'sentences' ? (
+          <>
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Choose topic</Text>
+              {renderTopicPicker()}
+              <Text style={styles.panelTitle}>New sentence</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Russian sentence"
+                placeholderTextColor={palette.textFaint}
+                value={russian}
+                onChangeText={setRussian}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Chinese words separated by spaces"
+                placeholderTextColor={palette.textFaint}
+                value={chineseWords}
+                onChangeText={setChineseWords}
+              />
+              <TouchableOpacity style={styles.primaryButton} onPress={addSentence} disabled={loading}>
+                {loading ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryButtonText}>Add sentence</Text>}
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.sectionTitle}>Add Sentence</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Russian sentence"
-              placeholderTextColor={AppPalette.textFaint}
-              value={russian}
-              onChangeText={setRussian}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Chinese words (space separated, correct order)"
-              placeholderTextColor={AppPalette.textFaint}
-              value={chineseWords}
-              onChangeText={setChineseWords}
-            />
-            <TouchableOpacity style={[styles.btn, { backgroundColor: AppPalette.success }]} onPress={addSentence} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>+ Add Sentence</Text>}
-            </TouchableOpacity>
-
-            {selectedTopic && (
-              <>
-                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-                  Sentences in &quot;{selectedTopic.title}&quot; ({sentences.length})
-                </Text>
+            {selectedTopic ? (
+              <View style={styles.panel}>
+                <Text style={styles.panelTitle}>Sentences in &quot;{selectedTopic.title}&quot;</Text>
                 {sentences.length === 0 ? (
                   <Text style={styles.emptyText}>No sentences yet</Text>
                 ) : (
-                  sentences.map(s => (
-                    <View key={s.id} style={styles.row}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.rowTitle}>{s.russian}</Text>
-                        <Text style={styles.rowPinyin}>{s.correct_order.join(' ')}</Text>
+                  sentences.map((sentence) => (
+                    <View key={sentence.id} style={styles.rowCard}>
+                      <View style={styles.rowContentWide}>
+                        <Text style={styles.rowTitle}>{sentence.russian}</Text>
+                        <Text style={styles.rowSubtext}>{sentence.correct_order.join(' ')}</Text>
                       </View>
                       <View style={styles.rowActions}>
-                        <TouchableOpacity onPress={() => setEditSentence(s)} style={styles.iconBtn}>
-                          <Text style={styles.iconBtnText}>✏️</Text>
+                        <TouchableOpacity onPress={() => setEditSentence(sentence)} style={styles.actionChip}>
+                          <Text style={styles.actionChipText}>EDIT</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => deleteSentence(s.id)} style={styles.iconBtn}>
-                          <Text style={styles.iconBtnText}>🗑️</Text>
+                        <TouchableOpacity onPress={() => deleteSentence(sentence.id)} style={styles.actionChip}>
+                          <Text style={styles.actionChipText}>DEL</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ))
                 )}
-              </>
-            )}
-          </View>
-        )}
+              </View>
+            ) : null}
+          </>
+        ) : null}
       </ScrollView>
 
-      {/* Edit Topic Modal */}
-      <Modal visible={!!editTopic} transparent animationType="slide">
+      <Modal visible={!!editTopic} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Edit Topic</Text>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit topic</Text>
             <TextInput
               style={styles.input}
               value={editTopic?.title}
-              onChangeText={v => setEditTopic(e => e ? { ...e, title: v } : null)}
+              onChangeText={(value) => setEditTopic((current) => (current ? { ...current, title: value } : null))}
               placeholder="Title"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editTopic?.emoji}
-              onChangeText={v => setEditTopic(e => e ? { ...e, emoji: v } : null)}
+              onChangeText={(value) => setEditTopic((current) => (current ? { ...current, emoji: value } : null))}
               placeholder="Emoji"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <View style={styles.colorRow}>
-              {COLORS.map(c => (
+              {COLORS.map((color) => (
                 <TouchableOpacity
-                  key={c}
-                  style={[styles.colorDot, { backgroundColor: c }, editTopic?.color === c && styles.colorSelected]}
-                  onPress={() => setEditTopic(e => e ? { ...e, color: c } : null)}
+                  key={color}
+                  style={[styles.colorDot, { backgroundColor: color }, editTopic?.color === color && styles.colorSelected]}
+                  onPress={() => setEditTopic((current) => (current ? { ...current, color } : null))}
                 />
               ))}
             </View>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditTopic(null)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditTopic(null)}>
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.btn} onPress={updateTopic} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
+              <TouchableOpacity style={styles.modalPrimary} onPress={updateTopic} disabled={loading}>
+                {loading ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryButtonText}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Edit Word Modal */}
-      <Modal visible={!!editWord} transparent animationType="slide">
+      <Modal visible={!!editWord} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Edit Word</Text>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit word</Text>
             <TextInput
               style={styles.input}
               value={editWord?.chinese}
-              onChangeText={v => setEditWord(e => e ? { ...e, chinese: v } : null)}
+              onChangeText={(value) => setEditWord((current) => (current ? { ...current, chinese: value } : null))}
               placeholder="Chinese"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editWord?.pinyin}
-              onChangeText={v => setEditWord(e => e ? { ...e, pinyin: v } : null)}
+              onChangeText={(value) => setEditWord((current) => (current ? { ...current, pinyin: value } : null))}
               placeholder="Pinyin"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editWord?.english}
-              onChangeText={v => setEditWord(e => e ? { ...e, english: v } : null)}
+              onChangeText={(value) => setEditWord((current) => (current ? { ...current, english: value } : null))}
               placeholder="English"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editWord?.russian}
-              onChangeText={v => setEditWord(e => e ? { ...e, russian: v } : null)}
+              onChangeText={(value) => setEditWord((current) => (current ? { ...current, russian: value } : null))}
               placeholder="Russian"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditWord(null)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditWord(null)}>
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.btn} onPress={updateWord} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
+              <TouchableOpacity style={styles.modalPrimary} onPress={updateWord} disabled={loading}>
+                {loading ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryButtonText}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Edit Sentence Modal */}
-      <Modal visible={!!editSentence} transparent animationType="slide">
+      <Modal visible={!!editSentence} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Edit Sentence</Text>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit sentence</Text>
             <TextInput
               style={styles.input}
               value={editSentence?.russian}
-              onChangeText={v => setEditSentence(e => e ? { ...e, russian: v } : null)}
+              onChangeText={(value) => setEditSentence((current) => (current ? { ...current, russian: value } : null))}
               placeholder="Russian sentence"
-              placeholderTextColor={AppPalette.textFaint}
+              placeholderTextColor={palette.textFaint}
             />
             <TextInput
               style={styles.input}
               value={editSentence?.correct_order.join(' ')}
-              onChangeText={v => setEditSentence(e => e ? { ...e, correct_order: v.split(' ').filter(w => w.trim() !== '') } : null)}
-              placeholder="Chinese words (space separated)"
-              placeholderTextColor={AppPalette.textFaint}
+              onChangeText={(value) =>
+                setEditSentence((current) =>
+                  current ? { ...current, correct_order: value.split(' ').filter((word) => word.trim() !== '') } : null
+                )
+              }
+              placeholder="Chinese words separated by spaces"
+              placeholderTextColor={palette.textFaint}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditSentence(null)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => setEditSentence(null)}>
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, { backgroundColor: AppPalette.success }]} onPress={updateSentence} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save</Text>}
+              <TouchableOpacity style={styles.modalPrimary} onPress={updateSentence} disabled={loading}>
+                {loading ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryButtonText}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -711,46 +739,231 @@ export default function AdminScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppPalette.bg },
-  authContainer: { flex: 1, backgroundColor: AppPalette.bg, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  authEmoji: { fontSize: 48, marginBottom: 16 },
-  authTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 24 },
-  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16 },
-  title: { fontSize: 32, fontWeight: '800', color: AppPalette.text },
-  tabBar: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: AppPalette.bgElevated },
-  tabBtnActive: { backgroundColor: AppPalette.tintStrong },
-  tabText: { color: AppPalette.textMuted, fontSize: 14, fontWeight: '600' },
-  tabTextActive: { color: AppPalette.text },
-  scroll: { flex: 1 },
-  section: { paddingHorizontal: 20, paddingBottom: 40 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: AppPalette.textMuted, letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },
-  input: { backgroundColor: AppPalette.bgElevated, borderRadius: 10, padding: 14, color: AppPalette.text, fontSize: 16, marginBottom: 10, borderWidth: 1, borderColor: AppPalette.border },
-  inputError: { borderColor: AppPalette.danger },
-  errorText: { color: AppPalette.danger, fontSize: 13, marginBottom: 10 },
-  colorRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  colorDot: { width: 28, height: 28, borderRadius: 14 },
-  colorSelected: { borderWidth: 3, borderColor: AppPalette.text },
-  btn: { backgroundColor: AppPalette.tintStrong, borderRadius: 10, padding: 14, alignItems: 'center' },
-  btnText: { color: AppPalette.text, fontSize: 15, fontWeight: '700' },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: AppPalette.bgElevated, borderRadius: 10, padding: 12, marginBottom: 8, gap: 10 },
-  rowAccent: { width: 3, height: 24, borderRadius: 2 },
-  rowEmoji: { fontSize: 18 },
-  rowTitle: { flex: 1, color: AppPalette.text, fontSize: 15, fontWeight: '600' },
-  rowChinese: { color: AppPalette.text, fontSize: 18, fontWeight: '700' },
-  rowPinyin: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
-  rowActions: { flexDirection: 'row', gap: 4 },
-  iconBtn: { padding: 6 },
-  iconBtnText: { fontSize: 16 },
-  chip: { backgroundColor: AppPalette.bgElevated, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: AppPalette.border },
-  chipSelected: { borderColor: AppPalette.tintStrong, backgroundColor: AppPalette.surface },
-  chipText: { color: AppPalette.text, fontSize: 14 },
-  emptyText: { color: AppPalette.textFaint, fontSize: 14, textAlign: 'center', paddingVertical: 20 },
-  modalOverlay: { flex: 1, backgroundColor: AppPalette.overlay, justifyContent: 'flex-end' },
-  modal: { backgroundColor: AppPalette.bgElevated, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 20 },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  modalCancel: { flex: 1, backgroundColor: AppPalette.surfaceSoft, borderRadius: 10, padding: 14, alignItems: 'center' },
-  modalCancelText: { color: AppPalette.textMuted, fontSize: 15, fontWeight: '600' },
-});
+const createStyles = (palette: any, fonts: any) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: palette.bg },
+    scroll: { paddingTop: 54, paddingHorizontal: 20, paddingBottom: 40 },
+    authScreen: { flex: 1, backgroundColor: palette.bg, justifyContent: 'center', paddingHorizontal: 20 },
+    authCard: {
+      backgroundColor: palette.bgElevated,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      borderRadius: 28,
+      padding: 24,
+    },
+    authMark: {
+      fontSize: 56,
+      color: palette.textMuted,
+      fontFamily: fonts.mono,
+      marginBottom: 12,
+    },
+    authTitle: {
+      fontSize: 32,
+      color: palette.text,
+      fontFamily: fonts.mono,
+      fontWeight: '700',
+      marginBottom: 8,
+    },
+    authCopy: {
+      fontSize: 14,
+      color: palette.textMuted,
+      fontFamily: fonts.mono,
+      lineHeight: 22,
+      marginBottom: 18,
+    },
+    topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 44 },
+    brand: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    brandTitle: { fontSize: 14, letterSpacing: 2, fontFamily: fonts.mono, fontWeight: '700', color: palette.text },
+    brandMeta: { fontSize: 10, letterSpacing: 1.1, fontFamily: fonts.mono, marginTop: 3, color: palette.textMuted },
+    controls: { flexDirection: 'row', gap: 8 },
+    eyebrow: { fontSize: 11, letterSpacing: 1.4, fontFamily: fonts.mono, marginBottom: 12, color: palette.textMuted },
+    title: { fontSize: 32, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 12, color: palette.text },
+    copy: { fontSize: 14, lineHeight: 24, fontFamily: fonts.mono, marginBottom: 20, maxWidth: '92%', color: palette.textSoft },
+    tabBar: { flexDirection: 'row', gap: 8, marginBottom: 20 },
+    tabButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.bgElevated,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabButtonActive: {
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surface,
+    },
+    tabButtonText: {
+      color: palette.textMuted,
+      fontFamily: fonts.mono,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    tabButtonTextActive: { color: palette.text },
+    panel: {
+      backgroundColor: palette.bgElevated,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      borderRadius: 24,
+      padding: 18,
+      marginBottom: 14,
+    },
+    panelTitle: {
+      fontSize: 11,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: palette.textMuted,
+      fontFamily: fonts.mono,
+      fontWeight: '700',
+      marginBottom: 12,
+    },
+    input: {
+      backgroundColor: palette.surface,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      color: palette.text,
+      fontSize: 15,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: palette.border,
+      fontFamily: fonts.mono,
+    },
+    inputError: { borderColor: palette.text },
+    errorText: {
+      color: palette.textMuted,
+      fontSize: 12,
+      fontFamily: fonts.mono,
+      marginTop: -2,
+      marginBottom: 12,
+    },
+    colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
+    colorDot: { width: 26, height: 26, borderRadius: 13 },
+    colorSelected: { borderWidth: 2, borderColor: palette.text },
+    primaryButton: {
+      backgroundColor: palette.text,
+      borderRadius: 16,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.text,
+    },
+    modalPrimary: {
+      flex: 1,
+      backgroundColor: palette.text,
+      borderRadius: 16,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.text,
+    },
+    primaryButtonText: {
+      color: palette.bg,
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      fontFamily: fonts.mono,
+    },
+    secondaryButton: {
+      flex: 1,
+      backgroundColor: palette.surface,
+      borderRadius: 16,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    secondaryButtonText: {
+      color: palette.textMuted,
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      fontFamily: fonts.mono,
+    },
+    chipsRow: { paddingBottom: 4, gap: 8, paddingRight: 8 },
+    chip: {
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+    },
+    chipSelected: {
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.bgElevated,
+    },
+    chipText: { color: palette.text, fontSize: 12, fontFamily: fonts.mono, fontWeight: '600' },
+    rowCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+      padding: 14,
+      marginBottom: 10,
+      gap: 12,
+    },
+    rowMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    rowEmoji: { fontSize: 20 },
+    rowContent: { flex: 1 },
+    rowContentWide: { flex: 1, gap: 4 },
+    rowTitle: { color: palette.text, fontSize: 16, fontWeight: '600', fontFamily: fonts.mono },
+    rowChinese: { color: palette.text, fontSize: 20, fontWeight: '700', fontFamily: fonts.mono },
+    rowSubtext: { color: palette.textMuted, fontSize: 12, fontFamily: fonts.mono, lineHeight: 18 },
+    rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    actionChip: {
+      minWidth: 52,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.bgElevated,
+      alignItems: 'center',
+    },
+    actionChipText: {
+      color: palette.text,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      fontFamily: fonts.mono,
+    },
+    emptyText: {
+      color: palette.textMuted,
+      fontSize: 13,
+      textAlign: 'center',
+      paddingVertical: 18,
+      fontFamily: fonts.mono,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: palette.overlay,
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+    },
+    modalCard: {
+      backgroundColor: palette.bgElevated,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+    },
+    modalTitle: {
+      fontSize: 20,
+      color: palette.text,
+      marginBottom: 16,
+      fontFamily: fonts.mono,
+      fontWeight: '700',
+    },
+    modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  });
