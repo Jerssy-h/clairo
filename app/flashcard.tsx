@@ -30,7 +30,7 @@ type Word = {
 export default function FlashcardScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topicId, topicTitle } = useLocalSearchParams();
+  const { topicId, topicTitle, allWords } = useLocalSearchParams();
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,11 +51,13 @@ export default function FlashcardScreen() {
     async function setup() {
       const id = await getDeviceId();
       setDeviceId(id);
-      const local = getLocalWords(topicId as string);
+      const isAllWordsMode = allWords === '1';
+      const local = !isAllWordsMode ? getLocalWords(topicId as string) : [];
       let dataWords = local && local.length > 0 ? local : [];
-      
+
       if (dataWords.length === 0) {
-        const { data } = await supabase.from('words').select('*').eq('topic_id', topicId);
+        const query = supabase.from('words').select('*');
+        const { data } = isAllWordsMode ? await query : await query.eq('topic_id', topicId);
         dataWords = data || [];
       }
       
@@ -63,7 +65,7 @@ export default function FlashcardScreen() {
       setLoading(false);
     }
     setup();
-  }, [topicId]);
+  }, [allWords, topicId]);
 
   const flipCard = () => {
     if (isAnimating.current) return;

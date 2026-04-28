@@ -89,6 +89,11 @@ export const translations = {
     open: 'Open',
     browse: 'Browse',
     topicsTabHint: 'Open any topic when you want to practice flashcards, quiz, sentence builder, or strokes.',
+    activeRecall: 'Active Recall',
+    activeRecallTitle: 'Practice everything in one run',
+    activeRecallEyebrow: 'ACTIVE RECALL',
+    allWords: 'All words',
+    strokes: 'Strokes',
   },
   ru: {
     // Flashcards & Learning (Missing keys fixed)
@@ -176,6 +181,11 @@ export const translations = {
     open: 'Открыть',
     browse: 'Обзор',
     topicsTabHint: 'Откройте любую тему для практики карточек, викторины, предложений или иероглифов.',
+    activeRecall: 'Активный повтор',
+    activeRecallTitle: 'Практикуйте всё сразу',
+    activeRecallEyebrow: 'АКТИВНЫЙ ПОВТОР',
+    allWords: 'Все слова',
+    strokes: 'Пропись',
   },
 };
 

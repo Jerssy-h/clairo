@@ -237,6 +237,33 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
+        <TouchableOpacity
+          style={styles.recallHeroCard}
+          onPress={() =>
+            router.push({
+              pathname: '/active-recall',
+            })
+          }
+          activeOpacity={0.88}>
+          <LinearGradient
+            colors={[blendHex(AppPalette.tintStrong, AppPalette.bgElevated, 0.18), blendHex(AppPalette.accent, AppPalette.bg, 0.62)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Text style={styles.recallBg}>学</Text>
+          <View style={styles.recallHeroTop}>
+            <Text style={styles.recallEyebrow}>{t.activeRecallEyebrow}</Text>
+            <View style={styles.recallCountBadge}>
+              <Text style={styles.recallCountText}>{totalWords} {t.words}</Text>
+            </View>
+          </View>
+          <Text style={styles.recallHeroTitle}>{t.activeRecallTitle}</Text>
+          <Text style={styles.recallHeroText}>
+            {t.flashcards} · {t.quiz} · {t.sentenceBuilder} · {t.strokes}
+          </Text>
+        </TouchableOpacity>
+
         {/* Recent topics */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t.recentTopics}</Text>
@@ -350,6 +377,61 @@ const styles = StyleSheet.create({
   progressPercent: { fontSize: 20, fontWeight: '800', color: AppPalette.accentSoft },
   progressBarBg: { width: 110, height: 5, backgroundColor: AppPalette.surfaceSoft, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: 5, borderRadius: 3 },
+  recallHeroCard: {
+    marginHorizontal: 20,
+    marginBottom: 28,
+    minHeight: 148,
+    borderRadius: 24,
+    overflow: 'hidden',
+    padding: 18,
+    borderWidth: 1,
+    borderColor: AppPalette.borderStrong,
+  },
+  recallBg: {
+    position: 'absolute',
+    right: -4,
+    bottom: -18,
+    fontSize: 136,
+    color: 'rgba(255,255,255,0.1)',
+    fontWeight: '900',
+    lineHeight: 148,
+  },
+  recallHeroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  recallEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    color: AppPalette.accentSoft,
+  },
+  recallCountBadge: {
+    backgroundColor: 'rgba(11,16,32,0.26)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  recallCountText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  recallHeroTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    maxWidth: '78%',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  recallHeroText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.78)',
+    fontWeight: '600',
+  },
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, marginBottom: 12,

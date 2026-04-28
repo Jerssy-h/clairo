@@ -31,7 +31,7 @@ type Sentence = {
 export default function SentenceScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
+  const { topicId, topicTitle, topicColor, allWords } = useLocalSearchParams();
   const color = (topicColor as string) || '#059669';
 
   const [sentences, setSentences] = useState<Sentence[]>([]);
@@ -76,11 +76,14 @@ export default function SentenceScreen() {
     setWordIdByChinese(mapping);
   };
 
+  const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
+
   const fetchSentences = async () => {
     // Сначала из локальной БД
-    const localSentences = getLocalSentences(topicId as string);
+    const isAllWordsMode = allWords === '1';
+    const localSentences = !isAllWordsMode ? getLocalSentences(topicId as string) : [];
     if (localSentences.length > 0) {
-      setSentences(localSentences);
+      setSentences(shuffle(localSentences));
       setLoading(false);
 
       // Маппинг слов из локальной БД
@@ -90,10 +93,12 @@ export default function SentenceScreen() {
     }
 
     // Фоллбэк на Supabase
-    const { data: sentenceData } = await supabase.from('sentences').select('*').eq('topic_id', topicId);
-    setSentences(sentenceData || []);
+    const sentenceQuery = supabase.from('sentences').select('*');
+    const { data: sentenceData } = isAllWordsMode ? await sentenceQuery : await sentenceQuery.eq('topic_id', topicId);
+    setSentences(shuffle(sentenceData || []));
 
-    const { data: wordData } = await supabase.from('words').select('id, chinese').eq('topic_id', topicId);
+    const wordQuery = supabase.from('words').select('id, chinese');
+    const { data: wordData } = isAllWordsMode ? await wordQuery : await wordQuery.eq('topic_id', topicId);
     buildWordIdMapping(wordData || []);
 
     setLoading(false);

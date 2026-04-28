@@ -1,5 +1,7 @@
 import { db } from './db';
 import { getDeviceId } from './device';
+import { logSupabaseFallback } from './network-debug';
+import { recalculateLocalTopicStats } from './offline-topics';
 import { supabase } from './supabase';
 
 export const syncAllData = async (): Promise<void> => {
@@ -7,7 +9,21 @@ export const syncAllData = async (): Promise<void> => {
     const deviceId = await getDeviceId();
 
     // 1. Темы
-    const { data: topics } = await supabase.from('topics_with_count').select('*');
+    let topics: any[] | null = null;
+    const { data: topicsWithCount, error: topicsWithCountError } = await supabase.from('topics_with_count').select('*');
+    if (topicsWithCountError) {
+      console.log('syncAllData: topics_with_count unavailable, falling back to topics:', topicsWithCountError);
+      const { data: baseTopics, error: baseTopicsError } = await supabase.from('topics').select('id, title, emoji, color');
+      if (baseTopicsError) throw baseTopicsError;
+      topics = (baseTopics || []).map((topic) => ({
+        ...topic,
+        word_count: 0,
+        known_count: 0,
+      }));
+    } else {
+      topics = topicsWithCount;
+    }
+
     if (topics) {
       for (const t of topics) {
         db.runSync(
@@ -63,9 +79,11 @@ export const syncAllData = async (): Promise<void> => {
       }
     }
 
+    await recalculateLocalTopicStats();
+
     console.log('✅ Синхронизация завершена');
   } catch (e) {
-    console.log('⚠️ Офлайн — используем локальные данные');
+    await logSupabaseFallback('syncAllData', e);
   }
 };
 

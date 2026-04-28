@@ -242,7 +242,7 @@ function CharacterWriter({
 export default function StrokeScreen() {
   const router = useRouter();
   const { language } = useLanguage();
-  const { topicId, topicTitle, topicColor } = useLocalSearchParams();
+  const { topicId, topicTitle, topicColor, allWords } = useLocalSearchParams();
   const color = (topicColor as string) || '#D97706';
 
   const [words, setWords] = useState<Word[]>([]);
@@ -263,12 +263,18 @@ export default function StrokeScreen() {
   }, []);
 
   const fetchWords = async () => {
-    const cacheKey = `words_${topicId}`;
+    const isAllWordsMode = allWords === '1';
+    const cacheKey = isAllWordsMode ? 'words_all' : `words_${topicId}`;
     const cached = getCache<Word[]>(cacheKey);
-    if (cached) { setWords(cached); setLoading(false); return; }
-    const { data, error } = await supabase.from('words').select('*').eq('topic_id', topicId);
+    if (cached) { setWords([...cached].sort(() => Math.random() - 0.5)); setLoading(false); return; }
+    const query = supabase.from('words').select('*');
+    const { data, error } = isAllWordsMode ? await query : await query.eq('topic_id', topicId);
     if (error) console.error(error);
-    else { setWords(data || []); setCache(cacheKey, data || []); }
+    else {
+      const randomized = [...(data || [])].sort(() => Math.random() - 0.5);
+      setWords(randomized);
+      setCache(cacheKey, data || []);
+    }
     setLoading(false);
   };
 

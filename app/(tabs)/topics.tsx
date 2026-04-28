@@ -77,6 +77,9 @@ export default function TopicsTabScreen() {
           <Text style={styles.heroEyebrow}>{t.browse}</Text>
           <Text style={styles.heroTitle}>{t.topics}</Text>
           <Text style={styles.heroText}>{t.topicsTabHint}</Text>
+          <TouchableOpacity style={styles.recallBtn} onPress={() => router.push('/active-recall')} activeOpacity={0.85}>
+            <Text style={styles.recallBtnText}>🧠 {t.activeRecall}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionHeader}>
@@ -188,6 +191,17 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 32, fontWeight: '900', color: AppPalette.text, marginBottom: 8 },
   heroText: { fontSize: 14, lineHeight: 22, color: AppPalette.textMuted },
+  recallBtn: {
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: AppPalette.bgElevated,
+    borderWidth: 1,
+    borderColor: AppPalette.border,
+    alignSelf: 'flex-start',
+  },
+  recallBtnText: { color: AppPalette.text, fontWeight: '700', fontSize: 12 },
   sectionHeader: {
     paddingHorizontal: 20,
     marginBottom: 12,

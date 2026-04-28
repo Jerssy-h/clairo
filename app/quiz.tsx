@@ -25,7 +25,7 @@ function shuffle<T>(array: T[]): T[] {
 export default function QuizScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { topicId, topicTitle } = useLocalSearchParams();
+  const { topicId, topicTitle, allWords } = useLocalSearchParams();
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,14 +117,16 @@ export default function QuizScreen() {
 
   const fetchWords = async () => {
     // Сначала из локальной БД
-    const local = getLocalWords(topicId as string);
+    const isAllWordsMode = allWords === '1';
+    const local = !isAllWordsMode ? getLocalWords(topicId as string) : [];
     if (local.length > 0) {
       setWords(shuffle(local));
       setLoading(false);
       return;
     }
     // Фоллбэк на Supabase
-    const { data } = await supabase.from('words').select('*').eq('topic_id', topicId);
+    const query = supabase.from('words').select('*');
+    const { data } = isAllWordsMode ? await query : await query.eq('topic_id', topicId);
     setWords(shuffle(data || []));
     setLoading(false);
   };
