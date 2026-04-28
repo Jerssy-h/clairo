@@ -94,6 +94,13 @@ export const translations = {
     activeRecallEyebrow: 'ACTIVE RECALL',
     allWords: 'All words',
     strokes: 'Strokes',
+    recognition: 'Recognition',
+    testing: 'Testing',
+    production: 'Production',
+    writing: 'Writing',
+    randomEveryRun: 'Random order every session',
+    fourModes: '4 modes',
+    topicPracticeSummary: 'Switch between recognition, testing, production, and writing.',
   },
   ru: {
     // Flashcards & Learning (Missing keys fixed)
@@ -186,6 +193,13 @@ export const translations = {
     activeRecallEyebrow: 'АКТИВНЫЙ ПОВТОР',
     allWords: 'Все слова',
     strokes: 'Пропись',
+    recognition: 'Узнавание',
+    testing: 'Проверка',
+    production: 'Составление',
+    writing: 'Написание',
+    randomEveryRun: 'Случайный порядок в каждой сессии',
+    fourModes: '4 режима',
+    topicPracticeSummary: 'Переключайтесь между узнаванием, проверкой, составлением и написанием.',
   },
 };
 
