@@ -1,93 +1,47 @@
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Language } from '@/lib/i18n';
 import React, { useRef, useState } from 'react';
 import {
-    Animated,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Animated,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import Svg, { ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
-
-// ── SVG Flags ────────────────────────────────────────────────────────────────
-
-const FlagRU = ({ size = 22 }: { size?: number }) => (
-  <Svg width={size} height={size * (2 / 3)} viewBox="0 0 900 600">
-    <Defs>
-      <ClipPath id="ru-clip">
-        <Rect width="900" height="600" rx="4" />
-      </ClipPath>
-    </Defs>
-    <G clipPath="url(#ru-clip)">
-      <Rect width="900" height="200" fill="#FFFFFF" />
-      <Rect y="200" width="900" height="200" fill="#0039A6" />
-      <Rect y="400" width="900" height="200" fill="#D52B1E" />
-    </G>
-  </Svg>
-);
-
-const FlagGB = ({ size = 22 }: { size?: number }) => (
-  <Svg width={size} height={size * (2 / 3)} viewBox="0 0 60 40">
-    <Defs>
-      <ClipPath id="gb-clip">
-        <Rect width="60" height="40" rx="3" />
-      </ClipPath>
-    </Defs>
-    <G clipPath="url(#gb-clip)">
-      {/* Blue background */}
-      <Rect width="60" height="40" fill="#012169" />
-      {/* White diagonals */}
-      <Path d="M0,0 L60,40 M60,0 L0,40" stroke="#FFFFFF" strokeWidth="8" />
-      {/* Red diagonals */}
-      <Path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="5" />
-      {/* White cross */}
-      <Path d="M30,0 V40 M0,20 H60" stroke="#FFFFFF" strokeWidth="13" />
-      {/* Red cross */}
-      <Path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="8" />
-    </G>
-  </Svg>
-);
-
-// ── Language options ──────────────────────────────────────────────────────────
 
 type LangOption = {
   code: Language;
   label: string;
-  sublabel: string;
-  Flag: React.FC<{ size?: number }>;
 };
 
 const LANGUAGES: LangOption[] = [
-  { code: 'en', label: 'English', sublabel: 'Interface in English', Flag: FlagGB },
-  { code: 'ru', label: 'Русский', sublabel: 'Интерфейс на русском', Flag: FlagRU },
+  { code: 'en', label: 'EN' },
+  { code: 'ru', label: 'RU' },
 ];
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function LanguagePicker() {
   const { language, changeLanguage } = useLanguage();
+  const { palette, fonts } = useAppTheme();
   const [open, setOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
-
-  const current = LANGUAGES.find((l) => l.code === language) ?? LANGUAGES[0];
+  const scaleAnim = useRef(new Animated.Value(0.98)).current;
 
   const openSheet = () => {
     setOpen(true);
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
     ]).start();
   };
 
   const closeSheet = (callback?: () => void) => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 40, duration: 160, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 0.98, duration: 150, useNativeDriver: true }),
     ]).start(() => {
       setOpen(false);
       callback?.();
@@ -100,53 +54,56 @@ export default function LanguagePicker() {
 
   return (
     <>
-      {/* Trigger button */}
-      <TouchableOpacity style={styles.trigger} onPress={openSheet} activeOpacity={0.75}>
-        <current.Flag size={20} />
-        <Text style={styles.triggerLabel}>{current.code.toUpperCase()}</Text>
-        <Text style={styles.chevron}>▾</Text>
+      <TouchableOpacity
+        style={[styles.trigger, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}
+        onPress={openSheet}
+        activeOpacity={0.82}
+      >
+        <Text style={[styles.triggerLabel, { color: palette.textSoft, fontFamily: fonts.mono }]}>
+          {language.toUpperCase()}
+        </Text>
       </TouchableOpacity>
 
-      {/* Bottom sheet modal */}
       <Modal visible={open} transparent animationType="none" onRequestClose={() => closeSheet()}>
         <TouchableWithoutFeedback onPress={() => closeSheet()}>
-          <Animated.View style={[styles.overlay, { opacity: fadeAnim }]} />
+          <Animated.View style={[styles.overlay, { backgroundColor: palette.overlay, opacity: fadeAnim }]} />
         </TouchableWithoutFeedback>
 
         <Animated.View
           style={[
-            styles.sheet,
+            styles.modalCard,
             {
-              transform: [{ translateY: slideAnim }],
+              backgroundColor: palette.bgElevated,
+              borderColor: palette.borderStrong,
               opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
             },
-          ]}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Language / Язык</Text>
-
-          {LANGUAGES.map((lang) => {
-            const isActive = lang.code === language;
-            return (
-              <TouchableOpacity
-                key={lang.code}
-                style={[styles.langRow, isActive && styles.langRowActive]}
-                onPress={() => select(lang.code)}
-                activeOpacity={0.75}>
-                <View style={styles.flagWrap}>
-                  <lang.Flag size={32} />
-                </View>
-                <View style={styles.langInfo}>
-                  <Text style={[styles.langLabel, isActive && styles.langLabelActive]}>{lang.label}</Text>
-                  <Text style={styles.langSublabel}>{lang.sublabel}</Text>
-                </View>
-                {isActive && (
-                  <View style={styles.checkWrap}>
-                    <Text style={styles.checkMark}>✓</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          ]}
+        >
+          <Text style={[styles.modalTitle, { color: palette.textMuted, fontFamily: fonts.mono }]}>LANGUAGE</Text>
+          <View style={styles.row}>
+            {LANGUAGES.map((lang, index) => {
+              const active = lang.code === language;
+              return (
+                <Pressable
+                  key={lang.code}
+                  style={[
+                    styles.languageChip,
+                    {
+                      backgroundColor: active ? palette.text : palette.bg,
+                      borderColor: active ? palette.text : palette.border,
+                      marginRight: index === LANGUAGES.length - 1 ? 0 : 8,
+                    },
+                  ]}
+                  onPress={() => select(lang.code)}
+                >
+                  <Text style={[styles.languageChipText, { color: active ? palette.bg : palette.text, fontFamily: fonts.mono }]}>
+                    {lang.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </Animated.View>
       </Modal>
     </>
@@ -155,111 +112,48 @@ export default function LanguagePicker() {
 
 const styles = StyleSheet.create({
   trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: AppPalette.surfaceSoft,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    minWidth: 48,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: AppPalette.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   triggerLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: AppPalette.text,
-    letterSpacing: 1,
-  },
-  chevron: {
-    fontSize: 10,
-    color: AppPalette.textMuted,
-    marginTop: 1,
+    letterSpacing: 1.1,
+    fontWeight: '700',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: AppPalette.overlay,
   },
-  sheet: {
+  modalCard: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: AppPalette.bgElevated,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 12,
-    paddingHorizontal: 20,
-    paddingBottom: 48,
-    borderTopWidth: 1,
-    borderColor: AppPalette.border,
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: AppPalette.borderStrong,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  sheetTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: AppPalette.textFaint,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
-  },
-  langRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    marginBottom: 8,
-    backgroundColor: AppPalette.surface,
+    top: 86,
+    right: 20,
+    minWidth: 190,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderRadius: 22,
+    padding: 16,
   },
-  langRowActive: {
-    borderColor: AppPalette.tint,
-    backgroundColor: `${AppPalette.tint}18`,
+  modalTitle: {
+    fontSize: 10,
+    letterSpacing: 1.2,
+    marginBottom: 12,
   },
-  flagWrap: {
-    width: 40,
-    height: 28,
-    borderRadius: 6,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: AppPalette.surfaceSoft,
+  row: {
+    flexDirection: 'row',
   },
-  langInfo: { flex: 1 },
-  langLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: AppPalette.textMuted,
-    marginBottom: 2,
+  languageChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  langLabelActive: {
-    color: AppPalette.text,
-  },
-  langSublabel: {
+  languageChipText: {
     fontSize: 12,
-    color: AppPalette.textFaint,
-  },
-  checkWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: AppPalette.tintStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkMark: {
-    color: AppPalette.white,
-    fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
 });

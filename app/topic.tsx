@@ -1,6 +1,6 @@
 import ActivityCard from '@/components/practice/ActivityCard';
 import PracticeHero from '@/components/practice/PracticeHero';
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { getCache, setCache } from '@/lib/cache';
 import { buildActivities } from '@/lib/activity-config';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -13,8 +13,10 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function TopicScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { palette, fonts } = useAppTheme();
   const { topicId, topicTitle, topicColor } = useLocalSearchParams();
   const color = (topicColor as string) || '#4F46E5';
+  const styles = createStyles(palette, fonts);
 
   const cacheKey = `word_count_${topicId}`;
   const [wordCount, setWordCount] = useState<number>(getCache<number>(cacheKey) ?? 0);
@@ -98,20 +100,22 @@ export default function TopicScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: AppPalette.textFaint,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
+const createStyles = (palette: any, fonts: any) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: palette.bg, paddingHorizontal: 20, paddingTop: 60 },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: palette.textMuted,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+      marginBottom: 12,
+      fontFamily: fonts.mono,
+    },
 
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-});
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+  });

@@ -1,4 +1,4 @@
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -30,7 +30,9 @@ type Word = {
 export default function FlashcardScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { palette, fonts } = useAppTheme();
   const { topicId, topicTitle, allWords } = useLocalSearchParams();
+  const styles = createStyles(palette, fonts);
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,8 +158,8 @@ export default function FlashcardScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
-        <ActivityIndicator color={AppPalette.white} size="large" />
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
+        <ActivityIndicator color={palette.text} size="small" />
       </LinearGradient>
     );
   }
@@ -166,7 +168,7 @@ export default function FlashcardScreen() {
     if (finished) {
        const percentage = Math.round((known / words.length) * 100);
        return (
-         <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
+         <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
            <Text style={styles.finishedEmoji}>{percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}</Text>
            <Text style={styles.finishedTitle}>{t.sessionComplete}</Text>
            <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
@@ -175,14 +177,14 @@ export default function FlashcardScreen() {
              <View style={styles.resultBox}><Text style={styles.resultNumber}>{words.length - known}</Text><Text style={styles.resultLabel}>{t.learning}</Text></View>
              <View style={styles.resultBox}><Text style={styles.resultNumber}>{percentage}%</Text><Text style={styles.resultLabel}>{t.score}</Text></View>
            </View>
-           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: AppPalette.tintStrong }]} onPress={() => router.back()}>
+           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: palette.text }]} onPress={() => router.back()}>
              <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
            </TouchableOpacity>
          </LinearGradient>
        );
     }
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>学</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>{t.noWordsYet}</Text>
@@ -201,7 +203,7 @@ export default function FlashcardScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[AppPalette.bg, AppPalette.bg]} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={[palette.bg, palette.bg]} style={StyleSheet.absoluteFillObject} />
       <Text style={styles.bgChar}>{card.chinese[0]}</Text>
 
       <View style={styles.header}>
@@ -213,7 +215,7 @@ export default function FlashcardScreen() {
         <View style={styles.knownPill}><Text style={styles.knownText}>✓ {known}</Text></View>
       </View>
 
-      <View style={styles.progressBarBg}><View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: AppPalette.tintStrong }]} /></View>
+      <View style={styles.progressBarBg}><View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: palette.text }]} /></View>
 
       <View style={styles.cardWrapper}>
         <Animated.View 
@@ -226,20 +228,20 @@ export default function FlashcardScreen() {
           {/* Front */}
           <Animated.View style={[styles.card, { transform: [{ rotateY: frontInterpolate }], zIndex: flipped ? 0 : 1 }]}>
             <TouchableOpacity style={styles.cardInner} onPress={flipCard} activeOpacity={1}>
-              <LinearGradient colors={[AppPalette.surface, AppPalette.bgElevated]} style={StyleSheet.absoluteFillObject} />
+              <LinearGradient colors={[palette.surface, palette.bgElevated]} style={StyleSheet.absoluteFillObject} />
               <Text style={styles.tapHint}>{t.tapToFlip}</Text>
               <Text style={styles.chineseText}>{card.chinese}</Text>
-              <Text style={[styles.pinyinText, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
+              <Text style={[styles.pinyinText, { color: palette.textMuted }]}>{card.pinyin}</Text>
             </TouchableOpacity>
           </Animated.View>
 
           {/* Back */}
           <Animated.View style={[styles.card, styles.cardBack, { transform: [{ rotateY: backInterpolate }], position: 'absolute' }]}>
             <TouchableOpacity style={styles.cardInner} onPress={flipCard} activeOpacity={1}>
-              <LinearGradient colors={[AppPalette.surfaceSoft, AppPalette.bgElevated]} style={StyleSheet.absoluteFillObject} />
+              <LinearGradient colors={[palette.surfaceSoft, palette.bgElevated]} style={StyleSheet.absoluteFillObject} />
               <Text style={styles.tapHint}>{t.tapToFlip}</Text>
               <Text style={styles.chineseSmall}>{card.chinese}</Text>
-              <Text style={[styles.pinyinSmall, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
+              <Text style={[styles.pinyinSmall, { color: palette.textMuted }]}>{card.pinyin}</Text>
               <Text style={styles.meaningText}>{meaning}</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -260,49 +262,49 @@ export default function FlashcardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
+const createStyles = (palette: any, fonts: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: palette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
+  bgChar: { position: 'absolute', fontSize: 320, color: palette.borderStrong, fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340, opacity: 0.35 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-  backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
-  backArrow: { color: AppPalette.text, fontSize: 18 },
+  backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.bgElevated, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.borderStrong },
+  backArrow: { color: palette.text, fontSize: 18, fontFamily: fonts.mono },
   headerCenter: { flex: 1 },
-  topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
-  progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
-  knownPill: { backgroundColor: AppPalette.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  knownText: { color: AppPalette.success, fontSize: 14, fontWeight: '700' },
-  progressBarBg: { height: 3, backgroundColor: AppPalette.surfaceSoft, borderRadius: 2, marginBottom: 16, overflow: 'hidden' },
+  topicName: { color: palette.text, fontSize: 16, fontWeight: '700', fontFamily: fonts.mono },
+  progressText: { color: palette.textMuted, fontSize: 12, marginTop: 2, fontFamily: fonts.mono },
+  knownPill: { backgroundColor: palette.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: palette.border },
+  knownText: { color: palette.text, fontSize: 14, fontWeight: '700', fontFamily: fonts.mono },
+  progressBarBg: { height: 3, backgroundColor: palette.surfaceSoft, borderRadius: 2, marginBottom: 16, overflow: 'hidden' },
   progressBarFill: { height: 3, borderRadius: 2 },
   cardWrapper: { flex: 1, marginBottom: 20 },
-  card: { position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: AppPalette.border, backgroundColor: AppPalette.bgElevated },
-  cardBack: { backgroundColor: AppPalette.bgElevated },
+  card: { position: 'absolute', width: '100%', height: '100%', backfaceVisibility: 'hidden', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: palette.borderStrong, backgroundColor: palette.bgElevated },
+  cardBack: { backgroundColor: palette.bgElevated },
   cardInner: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  tapHint: { position: 'absolute', top: 20, color: AppPalette.textFaint, fontSize: 12 },
-  chineseText: { fontSize: 80, fontWeight: '900', color: AppPalette.text, textAlign: 'center', marginBottom: 12 },
-  pinyinText: { fontSize: 24, fontWeight: '600' },
-  chineseSmall: { fontSize: 48, fontWeight: '900', color: AppPalette.text, textAlign: 'center', marginBottom: 8 },
-  pinyinSmall: { fontSize: 18, fontWeight: '600', marginBottom: 20 },
-  meaningText: { fontSize: 28, fontWeight: '700', color: AppPalette.text, textAlign: 'center' },
+  tapHint: { position: 'absolute', top: 20, color: palette.textFaint, fontSize: 11, fontFamily: fonts.mono, letterSpacing: 0.8 },
+  chineseText: { fontSize: 80, fontWeight: '700', color: palette.text, textAlign: 'center', marginBottom: 12, fontFamily: fonts.mono },
+  pinyinText: { fontSize: 20, fontWeight: '600', fontFamily: fonts.mono },
+  chineseSmall: { fontSize: 48, fontWeight: '700', color: palette.text, textAlign: 'center', marginBottom: 8, fontFamily: fonts.mono },
+  pinyinSmall: { fontSize: 16, fontWeight: '600', marginBottom: 20, fontFamily: fonts.mono },
+  meaningText: { fontSize: 24, fontWeight: '600', color: palette.text, textAlign: 'center', fontFamily: fonts.mono },
   buttonsRow: { flexDirection: 'row', gap: 12, marginBottom: 32 },
   actionButton: { flex: 1, borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1 },
-  actionButtonLeft: { backgroundColor: 'rgba(255,142,158,0.12)', borderColor: AppPalette.danger },
-  actionButtonRight: { backgroundColor: 'rgba(126,224,161,0.12)', borderColor: AppPalette.success },
-  actionButtonIcon: { fontSize: 24, fontWeight: '900', color: AppPalette.text, marginBottom: 4 },
-  actionButtonLabel: { fontSize: 12, fontWeight: '600', color: AppPalette.textMuted },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.07)', fontWeight: '900', marginBottom: 24 },
-  emptyCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border, marginBottom: 24, width: '100%' },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
-  emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },
+  actionButtonLeft: { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong },
+  actionButtonRight: { backgroundColor: palette.text, borderColor: palette.text },
+  actionButtonIcon: { fontSize: 20, fontWeight: '700', color: palette.text, marginBottom: 4, fontFamily: fonts.mono },
+  actionButtonLabel: { fontSize: 11, fontWeight: '600', color: palette.textMuted, fontFamily: fonts.mono, letterSpacing: 0.8 },
+  decorChar: { fontSize: 120, color: palette.borderStrong, fontWeight: '900', marginBottom: 24, opacity: 0.4 },
+  emptyCard: { backgroundColor: palette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: palette.border, marginBottom: 24, width: '100%' },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: palette.text, marginBottom: 8, textAlign: 'center', fontFamily: fonts.mono },
+  emptySubtext: { fontSize: 14, color: palette.textMuted, textAlign: 'center', fontFamily: fonts.mono, lineHeight: 22 },
   finishedEmoji: { fontSize: 64, marginBottom: 16 },
-  finishedTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 8 },
-  finishedSubtitle: { fontSize: 16, color: AppPalette.textMuted, marginBottom: 30 },
+  finishedTitle: { fontSize: 28, fontWeight: '700', color: palette.text, marginBottom: 8, fontFamily: fonts.mono },
+  finishedSubtitle: { fontSize: 16, color: palette.textMuted, marginBottom: 30, fontFamily: fonts.mono },
   resultsRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
-  resultBox: { backgroundColor: AppPalette.surface, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 90 },
-  resultNumber: { fontSize: 28, fontWeight: '800', color: AppPalette.text },
-  resultLabel: { fontSize: 12, color: AppPalette.textMuted, marginTop: 4 },
-  backBtn: { backgroundColor: AppPalette.surfaceSoft, borderRadius: 20, paddingHorizontal: 32, paddingVertical: 14, borderWidth: 1, borderColor: AppPalette.borderStrong },
-  backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
+  resultBox: { backgroundColor: palette.surface, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 90, borderWidth: 1, borderColor: palette.border },
+  resultNumber: { fontSize: 28, fontWeight: '700', color: palette.text, fontFamily: fonts.mono },
+  resultLabel: { fontSize: 11, color: palette.textMuted, marginTop: 4, fontFamily: fonts.mono },
+  backBtn: { backgroundColor: palette.bgElevated, borderRadius: 20, paddingHorizontal: 32, paddingVertical: 14, borderWidth: 1, borderColor: palette.borderStrong },
+  backBtnText: { color: palette.text, fontSize: 15, fontWeight: '600', fontFamily: fonts.mono },
   actionBtn: { borderRadius: 20, paddingHorizontal: 32, paddingVertical: 16 },
-  actionBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },
+  actionBtnText: { color: palette.bg, fontSize: 14, fontWeight: '700', fontFamily: fonts.mono, letterSpacing: 1 },
 });

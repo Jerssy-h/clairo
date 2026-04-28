@@ -1,4 +1,4 @@
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -21,28 +21,29 @@ export default function PracticeHero({
   badges,
 }: Props) {
   const router = useRouter();
+  const { palette, fonts } = useAppTheme();
 
   return (
     <>
       <Text style={styles.bgChar}>{backgroundChar}</Text>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Text style={styles.backArrow}>←</Text>
+      <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}>
+        <Text style={[styles.backArrow, { color: palette.text, fontFamily: fonts.mono }]}>←</Text>
       </TouchableOpacity>
 
-      <View style={styles.heroCard}>
+      <View style={[styles.heroCard, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}>
         <LinearGradient
-          colors={[`${accentColor}20`, AppPalette.bgElevated]}
+          colors={[`${accentColor}08`, palette.bgElevated]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={[styles.heroAccent, { backgroundColor: accentColor }]} />
-        <Text style={styles.heroTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.heroSubtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.heroTitle, { color: palette.text, fontFamily: fonts.mono }]}>{title}</Text>
+        {subtitle ? <Text style={[styles.heroSubtitle, { color: palette.textMuted, fontFamily: fonts.mono }]}>{subtitle}</Text> : null}
         <View style={styles.badgeRow}>
           {badges.map((badge) => (
-            <View key={badge} style={styles.badge}>
-              <Text style={styles.badgeText}>{badge}</Text>
+            <View key={badge} style={[styles.badge, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <Text style={[styles.badgeText, { color: palette.textSoft, fontFamily: fonts.mono }]}>{badge}</Text>
             </View>
           ))}
         </View>
@@ -65,13 +66,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: AppPalette.surfaceSoft,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 22,
   },
   backArrow: {
-    color: AppPalette.text,
     fontSize: 18,
   },
   heroCard: {
@@ -80,9 +80,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     padding: 20,
     borderWidth: 1,
-    borderColor: AppPalette.border,
     marginBottom: 28,
-    backgroundColor: AppPalette.bgElevated,
   },
   heroAccent: {
     position: 'absolute',
@@ -94,15 +92,13 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 34,
-    fontWeight: '900',
-    color: AppPalette.text,
+    fontWeight: '700',
     letterSpacing: -1,
     marginBottom: 8,
   },
   heroSubtitle: {
     fontSize: 14,
     lineHeight: 21,
-    color: AppPalette.textMuted,
     marginBottom: 16,
     maxWidth: '92%',
   },
@@ -115,12 +111,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   badgeText: {
-    color: AppPalette.textSoft,
     fontSize: 11,
     fontWeight: '700',
   },

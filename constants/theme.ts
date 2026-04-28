@@ -1,77 +1,111 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#7C6CFF';
-const tintColorDark = '#C9C2FF';
+export type AppThemeMode = 'light' | 'dark';
 
-export const Colors = {
-  light: {
-    text: '#1F1B2E',
-    background: '#F8F7FF',
-    tint: tintColorLight,
-    icon: '#7A7595',
-    tabIconDefault: '#7A7595',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#F4F1FF',
-    background: '#0F1020',
-    tint: tintColorDark,
-    icon: '#A7A2C3',
-    tabIconDefault: '#7E7A98',
-    tabIconSelected: tintColorDark,
-  },
-};
-
-export const AppPalette = {
-  bg: '#0B1020',
-  bgElevated: '#131A31',
-  surface: '#18213D',
-  surfaceSoft: '#1F2948',
-  card: '#202B4D',
-  border: 'rgba(189, 182, 255, 0.16)',
-  borderStrong: 'rgba(201, 194, 255, 0.24)',
-  text: '#F6F4FF',
-  textSoft: '#C5C0E4',
-  textMuted: '#9B96B8',
-  textFaint: '#7D7897',
-  tint: '#9B8CFF',
-  tintStrong: '#7C6CFF',
-  accent: '#6FD6C7',
-  accentSoft: '#9AE6DA',
-  success: '#7EE0A1',
-  danger: '#FF8E9E',
-  warning: '#FFC978',
-  overlay: 'rgba(8, 11, 24, 0.82)',
-  topicTrack: 'rgba(255,255,255,0.22)',
+export const lightPalette = {
+  bg: '#F5F1EA',
+  bgElevated: '#FAF7F2',
+  surface: '#F0EBE2',
+  surfaceSoft: '#E7E1D6',
+  card: '#F9F5EE',
+  border: 'rgba(25, 23, 19, 0.12)',
+  borderStrong: 'rgba(25, 23, 19, 0.22)',
+  text: '#171614',
+  textSoft: '#4E4A43',
+  textMuted: '#736D64',
+  textFaint: '#948D82',
+  tint: '#1C1A17',
+  tintStrong: '#111111',
+  accent: '#24211D',
+  accentSoft: '#37342E',
+  success: '#24211D',
+  danger: '#24211D',
+  warning: '#24211D',
+  overlay: 'rgba(18, 17, 14, 0.12)',
+  topicTrack: 'rgba(20,18,15,0.12)',
   white: '#FFFFFF',
 };
 
+export const darkPalette = {
+  bg: '#111110',
+  bgElevated: '#151513',
+  surface: '#1A1917',
+  surfaceSoft: '#20201D',
+  card: '#171613',
+  border: 'rgba(244, 239, 229, 0.10)',
+  borderStrong: 'rgba(244, 239, 229, 0.18)',
+  text: '#F4EFE5',
+  textSoft: '#D4CDC1',
+  textMuted: '#A59C8E',
+  textFaint: '#7D776E',
+  tint: '#F4EFE5',
+  tintStrong: '#FFFFFF',
+  accent: '#F0ECE3',
+  accentSoft: '#E0D9CD',
+  success: '#F4EFE5',
+  danger: '#F4EFE5',
+  warning: '#F4EFE5',
+  overlay: 'rgba(10, 10, 9, 0.48)',
+  topicTrack: 'rgba(244,239,229,0.18)',
+  white: '#FFFFFF',
+};
+
+export const appPalettes = {
+  light: lightPalette,
+  dark: darkPalette,
+};
+
+export const Colors = {
+  light: {
+    text: lightPalette.text,
+    background: lightPalette.bg,
+    tint: lightPalette.tint,
+    icon: lightPalette.textMuted,
+    tabIconDefault: lightPalette.textMuted,
+    tabIconSelected: lightPalette.text,
+  },
+  dark: {
+    text: darkPalette.text,
+    background: darkPalette.bg,
+    tint: darkPalette.tint,
+    icon: darkPalette.textMuted,
+    tabIconDefault: darkPalette.textMuted,
+    tabIconSelected: darkPalette.text,
+  },
+};
+
+// Legacy export for untouched screens. New work should use useAppTheme().
+export const AppPalette = darkPalette;
+
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'Menlo',
+    serif: 'Georgia',
+    rounded: 'Menlo',
+    mono: 'Menlo',
+  },
+  android: {
+    sans: 'monospace',
+    serif: 'serif',
+    rounded: 'monospace',
+    mono: 'monospace',
   },
   default: {
-    sans: 'normal',
+    sans: 'monospace',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'monospace',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: "'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    rounded: "'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace",
+    mono: "'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace",
   },
 });
+
+export const LetterSpacing = {
+  dense: -0.8,
+  normal: 0,
+  ui: 1.1,
+};

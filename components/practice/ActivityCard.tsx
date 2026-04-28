@@ -1,4 +1,4 @@
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -24,6 +24,8 @@ export default function ActivityCard({
   tag,
   onPress,
 }: Props) {
+  const { palette, fonts } = useAppTheme();
+
   return (
     <TouchableOpacity
       style={[styles.gridCard, locked && styles.gridCardLocked]}
@@ -32,7 +34,7 @@ export default function ActivityCard({
       disabled={locked}
     >
       <LinearGradient
-        colors={[`${color}18`, AppPalette.bgElevated]}
+        colors={[`${color}10`, palette.bgElevated]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
@@ -41,24 +43,24 @@ export default function ActivityCard({
       <Text style={styles.cardBgIcon}>{icon}</Text>
 
       <View style={styles.cardTopRow}>
-        <View style={[styles.cardIconWrap, { borderColor: `${color}44`, backgroundColor: `${color}18` }]}>
-          <Text style={styles.cardIcon}>{icon}</Text>
+        <View style={[styles.cardIconWrap, { borderColor: palette.borderStrong, backgroundColor: palette.surface }]}>
+          <Text style={[styles.cardIcon, { color: palette.text, fontFamily: fonts.mono }]}>{icon}</Text>
         </View>
         {tag ? (
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{tag}</Text>
+          <View style={[styles.tag, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <Text style={[styles.tagText, { color: palette.textMuted, fontFamily: fonts.mono }]}>{tag}</Text>
           </View>
         ) : null}
       </View>
 
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardSubtitle}>{subtitle}</Text>
+        <Text style={[styles.cardTitle, { color: palette.text, fontFamily: fonts.mono }]}>{title}</Text>
+        <Text style={[styles.cardSubtitle, { color: palette.textMuted, fontFamily: fonts.mono }]}>{subtitle}</Text>
       </View>
 
       {locked ? (
-        <View style={styles.lockBadge}>
-          <Text style={styles.lockText}>🔒</Text>
+        <View style={[styles.lockBadge, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <Text style={[styles.lockText, { color: palette.text, fontFamily: fonts.mono }]}>×</Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -72,9 +74,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: AppPalette.bgElevated,
+    backgroundColor: '#111',
     borderWidth: 1,
-    borderColor: AppPalette.border,
+    borderColor: 'rgba(0,0,0,0.08)',
     padding: 16,
   },
   gridCardLocked: {
@@ -113,19 +115,15 @@ const styles = StyleSheet.create({
   },
   cardIcon: {
     fontSize: 28,
-    fontWeight: '900',
-    color: AppPalette.text,
+    fontWeight: '700',
   },
   tag: {
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   tagText: {
-    color: AppPalette.textSoft,
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -138,13 +136,11 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: AppPalette.text,
-    letterSpacing: -0.3,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: AppPalette.textSoft,
     fontWeight: '500',
     lineHeight: 17,
     maxWidth: '85%',
@@ -156,11 +152,12 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(9,13,17,0.58)',
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   lockText: {
     fontSize: 14,
+    fontWeight: '700',
   },
 });

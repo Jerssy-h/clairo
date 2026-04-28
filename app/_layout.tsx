@@ -1,6 +1,6 @@
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AppThemeProvider, useAppTheme } from '@/lib/AppThemeContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -10,8 +10,8 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function RootNavigator() {
+  const { isDark, navTheme } = useAppTheme();
   const activityScreenOptions = {
     headerShown: false,
     animation: 'slide_from_right' as const,
@@ -20,23 +20,31 @@ export default function RootLayout() {
   };
 
   return (
+    <ThemeProvider value={navTheme}>
+      <Stack>
+        <Stack.Screen name="splash"      options={{ headerShown: false, gestureEnabled: false, animation: 'none' }} />
+        <Stack.Screen name="onboarding"  options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="(tabs)"      options={{ headerShown: false }} />
+        <Stack.Screen name="topic"       options={activityScreenOptions} />
+        <Stack.Screen name="active-recall" options={activityScreenOptions} />
+        <Stack.Screen name="flashcard"   options={activityScreenOptions} />
+        <Stack.Screen name="quiz"        options={activityScreenOptions} />
+        <Stack.Screen name="sentence"    options={activityScreenOptions} />
+        <Stack.Screen name="stroke"      options={activityScreenOptions} />
+        <Stack.Screen name="modal"       options={{ presentation: 'modal', title: 'Modal' }} />
+      </Stack>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <LanguageProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="splash"      options={{ headerShown: false, gestureEnabled: false, animation: 'none' }} />
-            <Stack.Screen name="onboarding"  options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="(tabs)"      options={{ headerShown: false }} />
-            <Stack.Screen name="topic"       options={activityScreenOptions} />
-            <Stack.Screen name="active-recall" options={activityScreenOptions} />
-            <Stack.Screen name="flashcard"   options={activityScreenOptions} />
-            <Stack.Screen name="quiz"        options={activityScreenOptions} />
-            <Stack.Screen name="sentence"    options={activityScreenOptions} />
-            <Stack.Screen name="stroke"      options={activityScreenOptions} />
-            <Stack.Screen name="modal"       options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
+        <AppThemeProvider>
+          <RootNavigator />
+        </AppThemeProvider>
       </LanguageProvider>
     </GestureHandlerRootView>
   );

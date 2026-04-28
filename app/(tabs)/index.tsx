@@ -1,7 +1,8 @@
 import LanguagePicker from '@/components/LanguagePicker';
 import Logo from '@/components/Logo';
+import ThemeToggle from '@/components/ThemeToggle';
 import { UpdateChecker } from '@/components/UpdateChecker';
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { isAdmin } from '@/lib/auth';
 import { initDB } from '@/lib/db';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -9,7 +10,6 @@ import { fetchAndCacheTopics, getLocalTopics } from '@/lib/offline-topics';
 import { getRecentTopicIds } from '@/lib/recent-topics';
 import { syncAllData } from '@/lib/sync';
 import { getUsername, syncUsernameToSupabase } from '@/lib/user';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -32,32 +32,12 @@ type Topic = {
   known_count: number;
 };
 
-const getGreetingChinese = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return '早上好';
-  if (hour < 18) return '下午好';
-  return '晚上好';
-};
-
-const blendHex = (hex: string, target: string, amount: number) => {
-  const normalize = (value: string) => {
-    const raw = value.replace('#', '');
-    return raw.length === 3 ? raw.split('').map((char) => char + char).join('') : raw;
-  };
-  const source = normalize(hex);
-  const blend = normalize(target);
-  const mix = (start: number, end: number) => Math.round(start + (end - start) * amount);
-  const r = mix(parseInt(source.slice(0, 2), 16), parseInt(blend.slice(0, 2), 16));
-  const g = mix(parseInt(source.slice(2, 4), 16), parseInt(blend.slice(2, 4), 16));
-  const b = mix(parseInt(source.slice(4, 6), 16), parseInt(blend.slice(4, 6), 16));
-  return `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
-};
-
 let splashShown = false;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { palette, fonts, isDark } = useAppTheme();
 
   const [isReady, setIsReady] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -67,6 +47,29 @@ export default function HomeScreen() {
   const [username, setUsernameState] = useState('');
 
   const enterAnim = useRef(new Animated.Value(0)).current;
+  const styles = createStyles(palette, fonts);
+
+  const loadDashboard = useCallback(async () => {
+    if (!isReady) return;
+
+    try {
+      const local = await getLocalTopics();
+      if (local?.length) {
+        setTopics(local);
+        setLoading(false);
+      }
+
+      const recentIds = await getRecentTopicIds();
+      setRecentTopicIds(recentIds || []);
+
+      const fresh = await fetchAndCacheTopics();
+      if (fresh?.length) setTopics(fresh);
+    } catch (err) {
+      console.log('Ошибка загрузки данных:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isReady]);
 
   useEffect(() => {
     async function prepare() {
@@ -81,8 +84,6 @@ export default function HomeScreen() {
         }
 
         setIsReady(true);
-
-        // Фоновая синхронизация всего контента
         syncAllData().then(() => loadDashboard());
 
         if (!splashShown) {
@@ -102,31 +103,7 @@ export default function HomeScreen() {
     }
 
     prepare();
-  }, []);
-
-  const loadDashboard = useCallback(async () => {
-    if (!isReady) return;
-
-    try {
-      const local = await getLocalTopics();
-      if (local && local.length > 0) {
-        setTopics(local);
-        setLoading(false);
-      }
-
-      const recentIds = await getRecentTopicIds();
-      setRecentTopicIds(recentIds || []);
-
-      const fresh = await fetchAndCacheTopics();
-      if (fresh && fresh.length > 0) {
-        setTopics(fresh);
-      }
-    } catch (err) {
-      console.log('Ошибка загрузки данных:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [isReady]);
+  }, [enterAnim, loadDashboard, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -137,11 +114,6 @@ export default function HomeScreen() {
   const totalWords = topics.reduce((sum, tp) => sum + (tp.word_count || 0), 0);
   const totalKnown = topics.reduce((sum, tp) => sum + (tp.known_count || 0), 0);
   const overallProgress = totalWords > 0 ? Math.round((totalKnown / totalWords) * 100) : 0;
-
-  const greeting =
-    new Date().getHours() < 12 ? t.goodMorning
-    : new Date().getHours() < 18 ? t.goodAfternoon
-    : t.goodEvening;
 
   const topicMap = useMemo(() => new Map(topics.map((topic) => [topic.id, topic])), [topics]);
 
@@ -155,8 +127,8 @@ export default function HomeScreen() {
   );
 
   const recommendations = useMemo(() => {
-    const started = topics.filter((t) => t.known_count > 0 && t.known_count < t.word_count);
-    const unstarted = topics.filter((t) => t.known_count === 0);
+    const started = topics.filter((item) => item.known_count > 0 && item.known_count < item.word_count);
+    const unstarted = topics.filter((item) => item.known_count === 0);
     return [
       ...started.sort((a, b) => a.known_count / Math.max(a.word_count, 1) - b.known_count / Math.max(b.word_count, 1)),
       ...unstarted,
@@ -175,302 +147,242 @@ export default function HomeScreen() {
     });
   };
 
+  const heroName = username || (language === 'ru' ? 'ученик' : 'learner');
+  const statLabels = {
+    words: language === 'ru' ? 'СЛОВА' : 'WORDS',
+    known: language === 'ru' ? 'ЗНАЮ' : 'KNOWN',
+    progress: language === 'ru' ? 'ПРОГРЕСС' : 'PROGRESS',
+  };
+
   if (!isReady) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color="white" size="large" />
+      <View style={[styles.loadingShell, { backgroundColor: palette.bg }]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <ActivityIndicator color={palette.text} size="small" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <View style={[styles.container, { backgroundColor: palette.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
-        {/* Header */}
         <Animated.View
           style={[
-            styles.headerCard,
+            styles.shell,
             {
               opacity: enterAnim,
-              transform: [{ translateY: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+              transform: [{ translateY: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
             },
-          ]}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity
-              onPress={() => adminMode && router.push('/admin')}
-              activeOpacity={adminMode ? 0.7 : 1}
-              style={styles.avatarWrapper}>
-              <Logo size={46} />
-            </TouchableOpacity>
-
-            <View style={styles.headerGreeting}>
-              {username ? <Text style={styles.username}>{username}</Text> : null}
-              <Text style={styles.greetingRow}>
-                <Text style={styles.greetingChinese}>{getGreetingChinese()} </Text>
-                <Text style={styles.greetingEn}>· {greeting}</Text>
-              </Text>
-            </View>
-
-            <LanguagePicker />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.progressRow}>
-            <View style={styles.progressLeft}>
-              <Text style={styles.progressLabel}>{t.overallProgress}</Text>
-              <Text style={styles.progressSub}>{totalKnown} {t.wordsLearned}</Text>
-            </View>
-            <View style={styles.progressRight}>
-              <Text style={styles.progressPercent}>{overallProgress}%</Text>
-              <View style={styles.progressBarBg}>
-                <LinearGradient
-                  colors={[AppPalette.tintStrong, AppPalette.accent]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.progressBarFill, { width: `${overallProgress}%` }]}
-                />
+          ]}
+        >
+          <View style={styles.topBar}>
+            <View style={styles.brand}>
+              <TouchableOpacity onPress={() => adminMode && router.push('/admin')} activeOpacity={adminMode ? 0.7 : 1}>
+                <Logo size={42} />
+              </TouchableOpacity>
+              <View>
+                <Text style={[styles.brandTitle, { color: palette.text }]}>CLAIRO</Text>
+                <Text style={[styles.brandMeta, { color: palette.textMuted }]}>
+                  {language === 'ru' ? 'labs' : 'labs'}
+                </Text>
               </View>
             </View>
-          </View>
-        </Animated.View>
-
-        <TouchableOpacity
-          style={styles.recallHeroCard}
-          onPress={() =>
-            router.push({
-              pathname: '/active-recall',
-            })
-          }
-          activeOpacity={0.88}>
-          <LinearGradient
-            colors={[blendHex(AppPalette.tintStrong, AppPalette.bgElevated, 0.18), blendHex(AppPalette.accent, AppPalette.bg, 0.62)]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Text style={styles.recallBg}>学</Text>
-          <View style={styles.recallHeroTop}>
-            <Text style={styles.recallEyebrow}>{t.activeRecallEyebrow}</Text>
-            <View style={styles.recallCountBadge}>
-              <Text style={styles.recallCountText}>{totalWords} {t.words}</Text>
+            <View style={styles.controls}>
+              <ThemeToggle />
+              <LanguagePicker />
             </View>
           </View>
-          <Text style={styles.recallHeroTitle}>{t.activeRecallTitle}</Text>
-          <Text style={styles.recallHeroText}>
-            {t.flashcards} · {t.quiz} · {t.sentenceBuilder} · {t.strokes}
-          </Text>
-        </TouchableOpacity>
 
-        {/* Recent topics */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t.recentTopics}</Text>
-          <TouchableOpacity onPress={() => router.push('/topics')}>
-            <Text style={styles.sectionAction}>{t.seeAll}</Text>
+          <View style={styles.heroBlock}>
+            <Text style={[styles.heroTitle, { color: palette.text }]}>
+              {language === 'ru'
+                ? `Мы лаборатория изучения\nкитайского.`
+                : `We are a Chinese\nlearning lab.`}
+            </Text>
+            <Text style={[styles.heroCopy, { color: palette.textSoft }]}>
+              {language === 'ru'
+                ? `Привет, ${heroName}. Открывай тему, запускай общий повтор и возвращайся к сложным словам.`
+                : `Hi, ${heroName}. Open a topic, run active recall, and return to the words that need work.`}
+            </Text>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}>
+              <Text style={[styles.statLabel, { color: palette.textMuted }]}>{statLabels.words}</Text>
+              <Text style={[styles.statValue, { color: palette.text }]}>{totalWords}</Text>
+            </View>
+            <View style={[styles.statCard, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}>
+              <Text style={[styles.statLabel, { color: palette.textMuted }]}>{statLabels.known}</Text>
+              <Text style={[styles.statValue, { color: palette.text }]}>{totalKnown}</Text>
+            </View>
+            <View style={[styles.statCard, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}>
+              <Text style={[styles.statLabel, { color: palette.textMuted }]}>{statLabels.progress}</Text>
+              <Text style={[styles.statValue, { color: palette.text }]}>{overallProgress}%</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryPanel, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}
+            onPress={() => router.push('/active-recall')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.panelEyebrow, { color: palette.textMuted }]}>◐ {t.activeRecall}</Text>
+            <Text style={[styles.panelTitle, { color: palette.text }]}>{t.activeRecallTitle}</Text>
+            <Text style={[styles.panelText, { color: palette.textMuted }]}>
+              {t.flashcards} · {t.quiz} · {t.sentenceBuilder} · {t.strokes}
+            </Text>
           </TouchableOpacity>
-        </View>
 
-        {loading ? (
-          <View style={styles.sectionBody}>
-            {[1, 2, 3].map((item) => <View key={item} style={styles.skeletonCard} />)}
-          </View>
-        ) : recentTopics.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>{t.noRecentPractice}</Text>
-            <Text style={styles.emptyText}>{t.noRecentPracticeHint}</Text>
-          </View>
-        ) : (
-          <View style={styles.sectionBody}>
-            {recentTopics.map((topic) => {
-              const progress = topic.word_count > 0 ? Math.round((topic.known_count / topic.word_count) * 100) : 0;
-              const remaining = Math.max(topic.word_count - topic.known_count, 0);
-              return (
-                <TouchableOpacity key={topic.id} style={styles.recentCard} onPress={() => openTopic(topic)} activeOpacity={0.86}>
-                  <LinearGradient
-                    colors={[blendHex(topic.color, AppPalette.bgElevated, 0.45), blendHex(topic.color, AppPalette.bg, 0.72)]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <View style={styles.recentHeaderRow}>
-                    <Text style={styles.recentEmoji}>{topic.emoji || '学'}</Text>
-                    <Text style={styles.recentPercent}>{progress}%</Text>
-                  </View>
-                  <Text style={styles.recentTitle}>{topic.title}</Text>
-                  <Text style={styles.recentMeta}>{remaining} {t.left} · {topic.word_count} {t.words}</Text>
-                  <View style={styles.topicBarBg}>
-                    <View style={[styles.topicBarFill, { width: `${progress}%` }]} />
-                  </View>
+          <SectionTitle label={t.recentTopics} action={t.seeAll} onPress={() => router.push('/topics')} palette={palette} fonts={fonts} />
+          {loading ? (
+            <View style={styles.placeholderWrap}>
+              {[1, 2].map((item) => (
+                <View key={item} style={[styles.placeholder, { borderColor: palette.border, backgroundColor: palette.bgElevated }]} />
+              ))}
+            </View>
+          ) : recentTopics.length === 0 ? (
+            <View style={[styles.emptyBlock, { borderColor: palette.border, backgroundColor: palette.bgElevated }]}>
+              <Text style={[styles.emptyText, { color: palette.textSoft }]}>
+                {t.noRecentPracticeHint}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {recentTopics.map((topic) => {
+                const progress = topic.word_count > 0 ? Math.round((topic.known_count / topic.word_count) * 100) : 0;
+                return (
+                  <TouchableOpacity
+                    key={topic.id}
+                    style={[styles.topicRow, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}
+                    onPress={() => openTopic(topic)}
+                    activeOpacity={0.84}
+                  >
+                    <Text style={[styles.topicSymbol, { color: palette.text }]}>{topic.emoji || 'C'}</Text>
+                    <View style={styles.topicCopy}>
+                      <Text style={[styles.topicTitle, { color: palette.text }]}>{topic.title}</Text>
+                      <Text style={[styles.topicMeta, { color: palette.textMuted }]}>
+                        {topic.word_count} {t.words} · {progress}%
+                      </Text>
+                    </View>
+                    <Text style={[styles.topicAction, { color: palette.textMuted }]}>→</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          <SectionTitle label={t.recommendations} palette={palette} fonts={fonts} />
+          <View style={styles.list}>
+            {recommendations.length === 0 ? (
+              <View style={[styles.emptyBlock, { borderColor: palette.border, backgroundColor: palette.bgElevated }]}>
+                <Text style={[styles.emptyText, { color: palette.textSoft }]}>{t.addFirstTopic}</Text>
+              </View>
+            ) : (
+              recommendations.map((topic) => (
+                <TouchableOpacity
+                  key={topic.id}
+                  style={[styles.recommendation, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}
+                  onPress={() => openTopic(topic)}
+                  activeOpacity={0.84}
+                >
+                  <Text style={[styles.recommendationTitle, { color: palette.text }]}>{topic.title}</Text>
+                  <Text style={[styles.recommendationBody, { color: palette.textMuted }]}>
+                    {topic.known_count === 0 ? t.startTopicHint : t.progressDoneHint(Math.round((topic.known_count / Math.max(topic.word_count, 1)) * 100))}
+                  </Text>
                 </TouchableOpacity>
-              );
-            })}
+              ))
+            )}
           </View>
-        )}
 
-        {/* Recommendations */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t.recommendations}</Text>
-        </View>
-
-        {loading ? (
-          <View style={styles.sectionBody}>
-            {[1, 2].map((item) => <View key={item} style={styles.skeletonCard} />)}
-          </View>
-        ) : recommendations.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>{t.noTopicsYet}</Text>
-            <Text style={styles.emptyText}>{t.addFirstTopic}</Text>
-          </View>
-        ) : (
-          <View style={styles.sectionBody}>
-            {recommendations.map((topic, index) => {
-              const progress = topic.word_count > 0 ? Math.round((topic.known_count / topic.word_count) * 100) : 0;
-              return (
-                <TouchableOpacity key={topic.id} style={styles.recommendationCard} onPress={() => openTopic(topic)} activeOpacity={0.85}>
-                  <View style={styles.recommendationCopy}>
-                    <Text style={styles.recommendationLabel}>{index === 0 ? t.bestNextStep : t.alsoWorthReviewing}</Text>
-                    <Text style={styles.recommendationTitle}>{topic.title}</Text>
-                    <Text style={styles.recommendationText}>
-                      {progress === 0 ? t.startTopicHint : t.progressDoneHint(progress)}
-                    </Text>
-                  </View>
-                  <View style={[styles.recommendationBadge, { backgroundColor: `${topic.color}22` }]}>
-                    <Text style={styles.recommendationBadgeText}>{progress}%</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        <UpdateChecker />
-        <View style={{ height: 40 }} />
+          <UpdateChecker />
+        </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppPalette.bg },
-  scroll: { paddingTop: 52, paddingBottom: 48 },
-  headerCard: {
-    marginHorizontal: 20, marginBottom: 28,
-    backgroundColor: AppPalette.bgElevated,
-    borderRadius: 24, padding: 16,
-    borderWidth: 1, borderColor: AppPalette.border,
-    shadowColor: '#050814', shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 12 },
-  },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatarWrapper: { borderRadius: 12, overflow: 'hidden' },
-  headerGreeting: { flex: 1 },
-  username: { fontSize: 15, fontWeight: '800', color: AppPalette.text, letterSpacing: -0.3, marginBottom: 2 },
-  greetingRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  greetingChinese: { fontSize: 13, fontWeight: '700', color: AppPalette.text },
-  greetingEn: { fontSize: 12, color: AppPalette.textMuted },
-  divider: { height: 1, backgroundColor: AppPalette.border, marginVertical: 14 },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  progressLeft: { flex: 1 },
-  progressLabel: { fontSize: 13, fontWeight: '700', color: AppPalette.text },
-  progressSub: { fontSize: 11, color: AppPalette.textMuted, marginTop: 2 },
-  progressRight: { alignItems: 'flex-end', gap: 6 },
-  progressPercent: { fontSize: 20, fontWeight: '800', color: AppPalette.accentSoft },
-  progressBarBg: { width: 110, height: 5, backgroundColor: AppPalette.surfaceSoft, borderRadius: 3, overflow: 'hidden' },
-  progressBarFill: { height: 5, borderRadius: 3 },
-  recallHeroCard: {
-    marginHorizontal: 20,
-    marginBottom: 28,
-    minHeight: 148,
-    borderRadius: 24,
-    overflow: 'hidden',
-    padding: 18,
-    borderWidth: 1,
-    borderColor: AppPalette.borderStrong,
-  },
-  recallBg: {
-    position: 'absolute',
-    right: -4,
-    bottom: -18,
-    fontSize: 136,
-    color: 'rgba(255,255,255,0.1)',
-    fontWeight: '900',
-    lineHeight: 148,
-  },
-  recallHeroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  recallEyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    color: AppPalette.accentSoft,
-  },
-  recallCountBadge: {
-    backgroundColor: 'rgba(11,16,32,0.26)',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  recallCountText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  recallHeroTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    maxWidth: '78%',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  recallHeroText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.78)',
-    fontWeight: '600',
-  },
-  sectionHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text },
-  sectionAction: { color: AppPalette.tint, fontSize: 13, fontWeight: '700' },
-  sectionBody: { paddingHorizontal: 20, gap: 12, marginBottom: 28 },
-  skeletonCard: { height: 110, borderRadius: 22, backgroundColor: AppPalette.bgElevated },
-  emptyCard: {
-    marginHorizontal: 20, marginBottom: 28,
-    backgroundColor: AppPalette.bgElevated,
-    borderRadius: 22, padding: 18,
-    borderWidth: 1, borderColor: AppPalette.border,
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: AppPalette.text, marginBottom: 6 },
-  emptyText: { fontSize: 13, lineHeight: 20, color: AppPalette.textMuted },
-  recentCard: { minHeight: 116, borderRadius: 22, overflow: 'hidden', padding: 18 },
-  recentHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  recentEmoji: { fontSize: 28 },
-  recentPercent: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
-  recentTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
-  recentMeta: { fontSize: 12, color: 'rgba(255,255,255,0.72)', marginBottom: 12 },
-  topicBarBg: { height: 4, backgroundColor: AppPalette.topicTrack, borderRadius: 99, overflow: 'hidden' },
-  topicBarFill: { height: 4, backgroundColor: '#FFFFFF', borderRadius: 99 },
-  recommendationCard: {
-    backgroundColor: AppPalette.bgElevated, borderRadius: 22, padding: 18,
-    borderWidth: 1, borderColor: AppPalette.border,
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-  },
-  recommendationCopy: { flex: 1 },
-  recommendationLabel: {
-    fontSize: 11, fontWeight: '700', color: AppPalette.accentSoft,
-    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6,
-  },
-  recommendationTitle: { fontSize: 17, fontWeight: '800', color: AppPalette.text, marginBottom: 4 },
-  recommendationText: { fontSize: 13, lineHeight: 20, color: AppPalette.textMuted },
-  recommendationBadge: {
-    minWidth: 56, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 10, paddingVertical: 12, borderRadius: 18,
-  },
-  recommendationBadgeText: { fontSize: 16, fontWeight: '800', color: AppPalette.text },
-});
+function SectionTitle({
+  label,
+  action,
+  onPress,
+  palette,
+  fonts,
+}: {
+  label: string;
+  action?: string;
+  onPress?: () => void;
+  palette: { text: string; textMuted: string };
+  fonts: { mono?: string; sans?: string; serif?: string; rounded?: string };
+}) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 30 }}>
+      <Text style={{ color: palette.text, fontFamily: fonts.mono, fontSize: 15, letterSpacing: 1 }}>{label.toUpperCase()}</Text>
+      {action && onPress ? (
+        <TouchableOpacity onPress={onPress}>
+          <Text style={{ color: palette.textMuted, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1 }}>{action.toUpperCase()}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+const createStyles = (palette: any, fonts: any) =>
+  StyleSheet.create({
+    container: { flex: 1 },
+    loadingShell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    scroll: { padding: 20, paddingTop: 54, paddingBottom: 44 },
+    shell: { gap: 0 },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
+      rowGap: 12,
+      columnGap: 12,
+    },
+    brand: {
+      flexDirection: 'row',
+      gap: 12,
+      alignItems: 'center',
+      flexShrink: 1,
+      minWidth: 0,
+      flex: 1,
+      paddingRight: 8,
+    },
+    brandTitle: { fontSize: 15, letterSpacing: 2.2, fontFamily: fonts.mono, fontWeight: '700' },
+    brandMeta: { fontSize: 10, letterSpacing: 1.2, fontFamily: fonts.mono, marginTop: 3 },
+    controls: {
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      flexShrink: 0,
+      marginLeft: 'auto',
+    },
+    heroBlock: { paddingTop: 80, paddingBottom: 34 },
+    heroTitle: { fontSize: 34, lineHeight: 44, fontFamily: fonts.mono, fontWeight: '500', marginBottom: 18 },
+    heroCopy: { fontSize: 13, lineHeight: 22, fontFamily: fonts.mono, maxWidth: '82%' },
+    statsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+    statCard: { flex: 1, minWidth: '30%', borderWidth: 1, borderRadius: 22, padding: 14 },
+    statLabel: { fontSize: 10, letterSpacing: 1.2, fontFamily: fonts.mono, marginBottom: 10 },
+    statValue: { fontSize: 24, fontFamily: fonts.mono, fontWeight: '600' },
+    primaryPanel: { borderWidth: 1, borderRadius: 26, padding: 18, marginTop: 22 },
+    panelEyebrow: { fontSize: 10, letterSpacing: 1.1, fontFamily: fonts.mono, marginBottom: 10 },
+    panelTitle: { fontSize: 24, lineHeight: 31, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 8 },
+    panelText: { fontSize: 11, lineHeight: 18, fontFamily: fonts.mono },
+    placeholderWrap: { gap: 10 },
+    placeholder: { height: 92, borderRadius: 22, borderWidth: 1 },
+    emptyBlock: { borderWidth: 1, borderRadius: 22, padding: 18 },
+    emptyText: { fontSize: 13, lineHeight: 22, fontFamily: fonts.mono },
+    list: { gap: 10 },
+    topicRow: { borderWidth: 1, borderRadius: 22, padding: 16, flexDirection: 'row', alignItems: 'center' },
+    topicSymbol: { width: 38, fontSize: 20, fontFamily: fonts.mono, fontWeight: '700' },
+    topicCopy: { flex: 1 },
+    topicTitle: { fontSize: 18, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 4 },
+    topicMeta: { fontSize: 12, fontFamily: fonts.mono, lineHeight: 18 },
+    topicAction: { fontSize: 16, fontFamily: fonts.mono },
+    recommendation: { borderWidth: 1, borderRadius: 22, padding: 16 },
+    recommendationTitle: { fontSize: 16, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 6 },
+    recommendationBody: { fontSize: 12, lineHeight: 20, fontFamily: fonts.mono },
+  });

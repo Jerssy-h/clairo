@@ -1,4 +1,4 @@
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -56,6 +56,8 @@ function CharacterWriter({
   round,
   language,
   onRoundComplete,
+  palette,
+  fonts,
 }: {
   char: string;
   color: string;
@@ -63,7 +65,10 @@ function CharacterWriter({
   round: number;
   language: string;
   onRoundComplete: () => void;
+  palette: any;
+  fonts: any;
 }) {
+  const styles = createStyles(palette, fonts);
   const writer = useHanziWriter({
     character: char,
     loader: (c) =>
@@ -133,9 +138,9 @@ function CharacterWriter({
   const isGuided = round < GUIDED_ROUNDS;
 
   const borderColor =
-    feedback === 'correct' ? AppPalette.success :
-    feedback === 'wrong' ? AppPalette.danger :
-    'rgba(255,255,255,0.12)';
+    feedback === 'correct' ? palette.text :
+    feedback === 'wrong' ? palette.textMuted :
+    palette.border;
 
   return (
     <View style={styles.writerSection}>
@@ -144,7 +149,8 @@ function CharacterWriter({
           writer={writer}
           loading={
             <View style={styles.canvasCentered}>
-              <ActivityIndicator color={AppPalette.white} />
+              <ActivityIndicator color={palette.text} />
+              
             </View>
           }
           error={
@@ -155,21 +161,21 @@ function CharacterWriter({
           }
           style={styles.writer}
         >
-          <HanziWriter.GridLines color="rgba(255,255,255,0.06)" />
+            <HanziWriter.GridLines color={palette.border} />
           <HanziWriter.Svg>
             {/* Outline: only shown in guided rounds */}
-            {isGuided && <HanziWriter.Outline color="rgba(255,255,255,0.10)" />}
+            {isGuided && <HanziWriter.Outline color={palette.borderStrong} />}
             {/* Ghost character: only shown in guided rounds */}
             {isGuided && (
               <HanziWriter.Character
-                color="rgba(255,255,255,0.12)"
-                radicalColor="rgba(255,255,255,0.12)"
+                color={palette.borderStrong}
+                radicalColor={palette.borderStrong}
               />
             )}
             {/* Correctly drawn strokes appear in topic color */}
             <HanziWriter.QuizStrokes color={color} />
             {/* Mistake flash — blue like the official example, clearly visible */}
-            <HanziWriter.QuizMistakeHighlighter color={AppPalette.accentSoft} strokeDuration={400} />
+            <HanziWriter.QuizMistakeHighlighter color={palette.textMuted} strokeDuration={400} />
           </HanziWriter.Svg>
         </HanziWriter>
 
@@ -184,8 +190,8 @@ function CharacterWriter({
               style={styles.writer}
             >
               <HanziWriter.Svg>
-                <HanziWriter.Outline color="rgba(255,255,255,0.6)" />
-                <HanziWriter.Character color="rgba(255,255,255,0.25)" radicalColor="rgba(255,255,255,0.25)" />
+                <HanziWriter.Outline color={palette.textMuted} />
+                <HanziWriter.Character color={palette.borderStrong} radicalColor={palette.borderStrong} />
               </HanziWriter.Svg>
             </HanziWriter>
           </Animated.View>
@@ -196,11 +202,11 @@ function CharacterWriter({
           <View
             style={[
               styles.feedbackOverlay,
-              { backgroundColor: (feedback === 'correct' ? AppPalette.success : AppPalette.danger) + '28' },
+              { backgroundColor: palette.overlay },
             ]}
             pointerEvents="none"
           >
-            <Text style={[styles.feedbackIcon, { color: feedback === 'correct' ? AppPalette.success : AppPalette.danger }]}>
+            <Text style={[styles.feedbackIcon, { color: feedback === 'correct' ? palette.text : palette.textMuted, fontFamily: fonts.mono }]}>
               {feedback === 'correct' ? '✓' : '✕'}
             </Text>
           </View>
@@ -229,7 +235,7 @@ function CharacterWriter({
           onPress={handlePeek}
           disabled={peeking}
         >
-          <Text style={[styles.peekBtnText, { color: AppPalette.tintStrong }]}>
+          <Text style={[styles.peekBtnText, { color: palette.text, fontFamily: fonts.mono }]}>
             {peeking ? '👁 Показывается…' : '👁 Показать на 3 сек'}
           </Text>
         </TouchableOpacity>
@@ -242,8 +248,10 @@ function CharacterWriter({
 export default function StrokeScreen() {
   const router = useRouter();
   const { language } = useLanguage();
+  const { palette, fonts } = useAppTheme();
   const { topicId, topicTitle, topicColor, allWords } = useLocalSearchParams();
   const color = (topicColor as string) || '#D97706';
+  const styles = createStyles(palette, fonts);
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -362,15 +370,15 @@ export default function StrokeScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
-        <ActivityIndicator color={AppPalette.white} size="large" />
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
+        <ActivityIndicator color={palette.text} size="small" />
       </LinearGradient>
     );
   }
 
   if (words.length === 0) {
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>笔</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>
@@ -386,12 +394,12 @@ export default function StrokeScreen() {
 
   if (allDone) {
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
         <Text style={styles.doneEmoji}>🏆</Text>
         <Text style={styles.doneTitle}>
           {language === 'ru' ? 'Все иероглифы пройдены!' : 'All characters done!'}
         </Text>
-        <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: AppPalette.tintStrong }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: palette.text }]} onPress={() => router.back()}>
           <Text style={styles.btnPrimaryText}>
             {language === 'ru' ? '← К темам' : '← Back to Topics'}
           </Text>
@@ -418,7 +426,7 @@ export default function StrokeScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[AppPalette.bg, AppPalette.bg]}
+        colors={[palette.bg, palette.bg]}
         style={StyleSheet.absoluteFillObject}
       />
       <Text style={styles.bgChar}>{char}</Text>
@@ -434,7 +442,7 @@ export default function StrokeScreen() {
             {index + 1} / {words.length} • {activeCharacterIndex + 1} / {characters.length}
           </Text>
         </View>
-        <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? color + '66' : AppPalette.success + '55' }]}>
+        <View style={[styles.phasePill, { backgroundColor: phase === 'watch' ? palette.surface : palette.text }]}>
           <Text style={styles.phasePillText}>
             {phase === 'watch'
               ? (language === 'ru' ? 'Смотреть' : 'Watch')
@@ -447,7 +455,7 @@ export default function StrokeScreen() {
       <View style={styles.progressBarBg}>
         <View style={[styles.progressBarFill, {
           width: `${((index + 1) / words.length) * 100}%`,
-          backgroundColor: AppPalette.tintStrong,
+          backgroundColor: palette.text,
         }]} />
       </View>
 
@@ -459,7 +467,7 @@ export default function StrokeScreen() {
             ? (language === 'ru' ? 'Слова подряд' : 'Word review')
             : (language === 'ru' ? 'Пропись иероглифа' : 'Practicing character')} {activeCharacterIndex + 1}/{characters.length}: {char}
         </Text>
-        <Text style={[styles.pinyinText, { color: AppPalette.tintStrong }]}>{card.pinyin}</Text>
+        <Text style={[styles.pinyinText, { color: palette.textMuted }]}>{card.pinyin}</Text>
         <Text style={styles.meaningText}>{meaning}</Text>
       </View>
 
@@ -471,8 +479,8 @@ export default function StrokeScreen() {
               key={i}
               style={[
                 styles.roundDot,
-                i < round && { backgroundColor: AppPalette.tintStrong },
-                i === round && { backgroundColor: AppPalette.tintStrong, transform: [{ scale: 1.3 }] },
+                i < round && { backgroundColor: palette.text },
+                i === round && { backgroundColor: palette.text, transform: [{ scale: 1.3 }] },
               ]}
             />
           ))}
@@ -488,6 +496,8 @@ export default function StrokeScreen() {
         round={effectiveRound}
         language={language}
         onRoundComplete={handleRoundComplete}
+        palette={palette}
+        fonts={fonts}
       />
 
       {/* Instructions */}
@@ -505,7 +515,7 @@ export default function StrokeScreen() {
       {phase === 'watch' && (
         <View style={styles.buttons}>
           <TouchableOpacity
-            style={[styles.btnPrimary, { backgroundColor: AppPalette.tintStrong }]}
+            style={[styles.btnPrimary, { backgroundColor: palette.text }]}
             onPress={() => { setPhase('practice'); setRound(0); }}
           >
             <Text style={styles.btnPrimaryText}>
@@ -528,7 +538,7 @@ export default function StrokeScreen() {
         <View style={styles.navDots}>
           {words.slice(0, 7).map((_, i) => (
             <TouchableOpacity key={i} onPress={() => goTo(i)}>
-              <View style={[styles.dot, i === index && { backgroundColor: AppPalette.tintStrong, width: 16 }]} />
+              <View style={[styles.dot, i === index && { backgroundColor: palette.text, width: 16 }]} />
             </TouchableOpacity>
           ))}
           {words.length > 7 && <Text style={styles.dotsMore}>…</Text>}
@@ -546,49 +556,50 @@ export default function StrokeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
+const createStyles = (palette: any, fonts: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: palette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   bgChar: {
-    position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)',
+    position: 'absolute', fontSize: 320, color: palette.borderStrong,
     fontWeight: '900', top: height * 0.1, alignSelf: 'center', lineHeight: 340,
+    opacity: 0.35,
   },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: palette.bgElevated, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.borderStrong,
   },
-  backArrow: { color: AppPalette.text, fontSize: 18 },
+  backArrow: { color: palette.text, fontSize: 18, fontFamily: fonts.mono },
   headerCenter: { flex: 1 },
-  topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
-  progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
+  topicName: { color: palette.text, fontSize: 16, fontWeight: '700', fontFamily: fonts.mono },
+  progressText: { color: palette.textMuted, fontSize: 12, marginTop: 2, fontFamily: fonts.mono },
   phasePill: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  phasePillText: { color: AppPalette.white, fontSize: 12, fontWeight: '700' },
+  phasePillText: { color: palette.bg, fontSize: 12, fontWeight: '700', fontFamily: fonts.mono },
   progressBarBg: {
-    height: 3, backgroundColor: AppPalette.surfaceSoft,
+    height: 3, backgroundColor: palette.surfaceSoft,
     borderRadius: 2, marginBottom: 16, overflow: 'hidden',
   },
   progressBarFill: { height: 3, borderRadius: 2 },
   wordInfo: { alignItems: 'center', marginBottom: 8, gap: 2 },
-  chineseText: { fontSize: 30, fontWeight: '800', color: AppPalette.text, letterSpacing: 2 },
-  pinyinText: { fontSize: 16, fontWeight: '600' },
-  currentCharText: { fontSize: 13, color: AppPalette.textSoft, fontWeight: '600' },
-  meaningText: { fontSize: 13, color: AppPalette.textMuted, fontWeight: '500' },
+  chineseText: { fontSize: 30, fontWeight: '700', color: palette.text, letterSpacing: 2, fontFamily: fonts.mono },
+  pinyinText: { fontSize: 16, fontWeight: '600', fontFamily: fonts.mono },
+  currentCharText: { fontSize: 13, color: palette.textSoft, fontWeight: '600', fontFamily: fonts.mono },
+  meaningText: { fontSize: 13, color: palette.textMuted, fontWeight: '500', fontFamily: fonts.mono },
   roundRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 8 },
   roundDot: {
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: AppPalette.borderStrong,
-    borderWidth: 1, borderColor: AppPalette.border,
+    backgroundColor: palette.borderStrong,
+    borderWidth: 1, borderColor: palette.border,
   },
   writerSection: { alignItems: 'center', width: '100%', marginBottom: 6 },
   canvasWrapper: {
     width: 300, height: 300, borderRadius: 24, borderWidth: 1.5,
-    backgroundColor: AppPalette.bgElevated, overflow: 'hidden',
+    backgroundColor: palette.bgElevated, overflow: 'hidden',
     position: 'relative', marginBottom: 10, alignSelf: 'center',
   },
   writer: { width: 300, height: 300, alignSelf: 'center' },
   canvasCentered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  canvasSubText: { color: AppPalette.textMuted, fontSize: 13 },
+  canvasSubText: { color: palette.textMuted, fontSize: 13, fontFamily: fonts.mono },
   peekOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 5,
@@ -597,44 +608,44 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center', justifyContent: 'center', zIndex: 10,
   },
-  feedbackIcon: { fontSize: 60, fontWeight: '900' },
+  feedbackIcon: { fontSize: 60, fontWeight: '700' },
   replayBtn: {
-    backgroundColor: AppPalette.surface, borderRadius: 16,
+    backgroundColor: palette.surface, borderRadius: 16,
     paddingHorizontal: 20, paddingVertical: 8,
-    borderWidth: 1, borderColor: AppPalette.border,
+    borderWidth: 1, borderColor: palette.border,
   },
-  replayBtnText: { color: AppPalette.textSoft, fontSize: 14, fontWeight: '600' },
+  replayBtnText: { color: palette.textSoft, fontSize: 14, fontWeight: '600', fontFamily: fonts.mono },
   peekBtn: {
     borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8,
-    borderWidth: 1, backgroundColor: AppPalette.bgElevated,
+    borderWidth: 1, backgroundColor: palette.bgElevated,
   },
   peekBtnActive: { opacity: 0.5 },
   peekBtnText: { fontSize: 14, fontWeight: '600' },
-  instructions: { textAlign: 'center', color: AppPalette.textFaint, fontSize: 12, marginBottom: 10 },
-  reviewHint: { textAlign: 'center', color: AppPalette.textSoft, fontSize: 12, marginBottom: 12 },
+  instructions: { textAlign: 'center', color: palette.textFaint, fontSize: 12, marginBottom: 10, fontFamily: fonts.mono },
+  reviewHint: { textAlign: 'center', color: palette.textSoft, fontSize: 12, marginBottom: 12, fontFamily: fonts.mono },
   buttons: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   btnPrimary: { flex: 1, borderRadius: 20, height: 52, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryText: { color: AppPalette.white, fontSize: 15, fontWeight: '700' },
+  btnPrimaryText: { color: palette.bg, fontSize: 15, fontWeight: '700', fontFamily: fonts.mono, letterSpacing: 1 },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  navBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: AppPalette.surface },
+  navBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border },
   navBtnDisabled: { opacity: 0.3 },
-  navBtnText: { color: AppPalette.text, fontSize: 13, fontWeight: '600' },
+  navBtnText: { color: palette.text, fontSize: 13, fontWeight: '600', fontFamily: fonts.mono },
   navDots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: AppPalette.borderStrong },
-  dotsMore: { color: AppPalette.textFaint, fontSize: 12 },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.07)', fontWeight: '900', marginBottom: 24 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.borderStrong },
+  dotsMore: { color: palette.textFaint, fontSize: 12, fontFamily: fonts.mono },
+  decorChar: { fontSize: 120, color: palette.borderStrong, fontWeight: '900', marginBottom: 24, opacity: 0.4 },
   emptyCard: {
-    backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28,
-    alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border,
+    backgroundColor: palette.bgElevated, borderRadius: 24, padding: 28,
+    alignItems: 'center', borderWidth: 1, borderColor: palette.border,
     marginBottom: 24, width: '100%',
   },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, textAlign: 'center' },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: palette.text, textAlign: 'center', fontFamily: fonts.mono },
   backBtn: {
-    backgroundColor: AppPalette.surfaceSoft, borderRadius: 20,
+    backgroundColor: palette.bgElevated, borderRadius: 20,
     paddingHorizontal: 32, paddingVertical: 14,
-    borderWidth: 1, borderColor: AppPalette.borderStrong,
+    borderWidth: 1, borderColor: palette.borderStrong,
   },
-  backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
+  backBtnText: { color: palette.text, fontSize: 16, fontWeight: '600', fontFamily: fonts.mono },
   doneEmoji: { fontSize: 72, marginBottom: 16 },
-  doneTitle: { fontSize: 24, fontWeight: '800', color: AppPalette.text, marginBottom: 32, textAlign: 'center' },
+  doneTitle: { fontSize: 24, fontWeight: '700', color: palette.text, marginBottom: 32, textAlign: 'center', fontFamily: fonts.mono },
 });

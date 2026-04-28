@@ -1,4 +1,4 @@
-import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/lib/AppThemeContext';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -18,9 +18,6 @@ import {
 
 const { height } = Dimensions.get('window');
 
-const SUCCESS_GREEN = AppPalette.success;
-const SUCCESS_GREEN_BRIGHT = AppPalette.accent;
-
 type Sentence = {
   id: string;
   russian: string;
@@ -31,8 +28,10 @@ type Sentence = {
 export default function SentenceScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { palette, fonts } = useAppTheme();
   const { topicId, topicTitle, topicColor, allWords } = useLocalSearchParams();
   const color = (topicColor as string) || '#059669';
+  const styles = createStyles(palette, fonts);
 
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,24 +189,24 @@ export default function SentenceScreen() {
 
   const gradientColor1 = gradientAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [color + 'CC', SUCCESS_GREEN + 'EE'],
+    outputRange: [color + '22', palette.bgElevated],
   });
   const gradientColor2 = gradientAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [color + '44', SUCCESS_GREEN + '88'],
+    outputRange: [color + '10', palette.bg],
   });
 
   if (loading) {
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
-        <ActivityIndicator color={AppPalette.white} size="large" />
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
+        <ActivityIndicator color={palette.text} size="small" />
       </LinearGradient>
     );
   }
 
   if (sentences.length === 0) {
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
         <Text style={styles.decorChar}>文</Text>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>{t.noSentencesYet}</Text>
@@ -223,7 +222,7 @@ export default function SentenceScreen() {
   if (finished) {
     const percentage = Math.round((score / sentences.length) * 100);
     return (
-      <LinearGradient colors={[AppPalette.bgElevated, AppPalette.bg]} style={styles.center}>
+      <LinearGradient colors={[palette.bgElevated, palette.bg]} style={styles.center}>
         <Text style={styles.finishedEmoji}>{percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '💪'}</Text>
         <Text style={styles.finishedTitle}>{t.complete2}</Text>
         <Text style={styles.finishedSubtitle}>{topicTitle}</Text>
@@ -241,7 +240,7 @@ export default function SentenceScreen() {
             <Text style={styles.resultLabel}>{t.score}</Text>
           </View>
         </View>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: AppPalette.tintStrong }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: palette.text }]} onPress={() => router.back()}>
           <Text style={styles.actionBtnText}>{t.backToTopics}</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -255,7 +254,7 @@ export default function SentenceScreen() {
     <View style={styles.container}>
       <Animated.View style={StyleSheet.absoluteFillObject}>
         <AnimatedLinearGradient
-          colors={[gradientColor1, gradientColor2, AppPalette.bg]}
+          colors={[gradientColor1, gradientColor2, palette.bg]}
           style={StyleSheet.absoluteFillObject}
         />
       </Animated.View>
@@ -276,7 +275,7 @@ export default function SentenceScreen() {
       </View>
 
       <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: AppPalette.tintStrong }]} />
+        <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: palette.text }]} />
       </View>
 
       <View style={styles.russianCard}>
@@ -300,7 +299,7 @@ export default function SentenceScreen() {
                 return (
                   <Animated.View key={i} style={{ transform: [{ scale }] }}>
                     <TouchableOpacity
-                      style={[styles.selectedWord, { backgroundColor: result === 'correct' ? SUCCESS_GREEN : color }]}
+                      style={[styles.selectedWord, { backgroundColor: result === 'correct' ? palette.text : palette.surfaceSoft }]}
                       onPress={() => handleRemoveWord(word, i)}
                     >
                       <Text style={styles.selectedWordText}>{word}</Text>
@@ -340,12 +339,12 @@ export default function SentenceScreen() {
       </View>
 
       {result === 'correct' ? (
-        <TouchableOpacity style={[styles.checkBtn, { backgroundColor: SUCCESS_GREEN_BRIGHT }]} onPress={handleNext}>
+        <TouchableOpacity style={[styles.checkBtn, { backgroundColor: palette.text }]} onPress={handleNext}>
           <Text style={styles.checkBtnText}>{index === sentences.length - 1 ? t.finish : t.next}</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[styles.checkBtn, { backgroundColor: AppPalette.tintStrong }, selected.length === 0 && styles.checkBtnDisabled]}
+          style={[styles.checkBtn, { backgroundColor: palette.text }, selected.length === 0 && styles.checkBtnDisabled]}
           onPress={handleCheck}
           disabled={selected.length === 0}
         >
@@ -358,55 +357,55 @@ export default function SentenceScreen() {
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: AppPalette.bg, paddingHorizontal: 20, paddingTop: 60 },
+const createStyles = (palette: any, fonts: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: palette.bg, paddingHorizontal: 20, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  bgChar: { position: 'absolute', fontSize: 320, color: 'rgba(255,255,255,0.03)', fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340 },
+  bgChar: { position: 'absolute', fontSize: 320, color: palette.borderStrong, fontWeight: '900', top: height * 0.05, alignSelf: 'center', lineHeight: 340, opacity: 0.35 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-  backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: AppPalette.surfaceSoft, alignItems: 'center', justifyContent: 'center' },
-  backArrow: { color: AppPalette.text, fontSize: 18 },
+  backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.bgElevated, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.borderStrong },
+  backArrow: { color: palette.text, fontSize: 18, fontFamily: fonts.mono },
   headerCenter: { flex: 1 },
-  topicName: { color: AppPalette.text, fontSize: 16, fontWeight: '700' },
-  progressText: { color: AppPalette.textMuted, fontSize: 12, marginTop: 2 },
-  scorePill: { backgroundColor: AppPalette.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  scoreText: { color: AppPalette.success, fontSize: 14, fontWeight: '700' },
-  progressBarBg: { height: 3, backgroundColor: AppPalette.surfaceSoft, borderRadius: 2, marginBottom: 20, overflow: 'hidden' },
+  topicName: { color: palette.text, fontSize: 16, fontWeight: '700', fontFamily: fonts.mono },
+  progressText: { color: palette.textMuted, fontSize: 12, marginTop: 2, fontFamily: fonts.mono },
+  scorePill: { backgroundColor: palette.surface, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: palette.border },
+  scoreText: { color: palette.text, fontSize: 14, fontWeight: '700', fontFamily: fonts.mono },
+  progressBarBg: { height: 3, backgroundColor: palette.surfaceSoft, borderRadius: 2, marginBottom: 20, overflow: 'hidden' },
   progressBarFill: { height: 3, borderRadius: 2 },
-  russianCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: AppPalette.border },
-  russianLabel: { color: AppPalette.textMuted, fontSize: 12, marginBottom: 8, letterSpacing: 0.5 },
-  russianText: { color: AppPalette.text, fontSize: 22, fontWeight: '700' },
+  russianCard: { backgroundColor: palette.bgElevated, borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: palette.borderStrong },
+  russianLabel: { color: palette.textMuted, fontSize: 11, marginBottom: 8, letterSpacing: 0.8, fontFamily: fonts.mono, textTransform: 'uppercase' },
+  russianText: { color: palette.text, fontSize: 22, fontWeight: '600', fontFamily: fonts.mono },
   answerArea: { marginBottom: 16 },
-  areaLabel: { color: AppPalette.textMuted, fontSize: 12, marginBottom: 8, letterSpacing: 0.5 },
-  answerBox: { backgroundColor: AppPalette.bgElevated, borderRadius: 16, padding: 16, minHeight: 64, justifyContent: 'center', borderWidth: 1, borderColor: AppPalette.border, position: 'relative', overflow: 'hidden' },
-  answerCorrect: { borderColor: SUCCESS_GREEN_BRIGHT, backgroundColor: 'rgba(111,214,199,0.14)' },
-  answerWrong: { borderColor: AppPalette.danger, backgroundColor: 'rgba(255,142,158,0.12)' },
-  placeholder: { color: AppPalette.textFaint, fontSize: 14, textAlign: 'center' },
+  areaLabel: { color: palette.textMuted, fontSize: 11, marginBottom: 8, letterSpacing: 0.8, fontFamily: fonts.mono, textTransform: 'uppercase' },
+  answerBox: { backgroundColor: palette.bgElevated, borderRadius: 16, padding: 16, minHeight: 64, justifyContent: 'center', borderWidth: 1, borderColor: palette.border, position: 'relative', overflow: 'hidden' },
+  answerCorrect: { borderColor: palette.text, backgroundColor: palette.bgElevated },
+  answerWrong: { borderColor: palette.textMuted, backgroundColor: palette.bgElevated },
+  placeholder: { color: palette.textFaint, fontSize: 14, textAlign: 'center', fontFamily: fonts.mono },
   wordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   selectedWord: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  selectedWordText: { color: AppPalette.white, fontSize: 18, fontWeight: '600' },
+  selectedWordText: { color: palette.bg, fontSize: 18, fontWeight: '600', fontFamily: fonts.mono },
   checkmarkOverlay: { position: 'absolute', right: 14, top: '50%', marginTop: -18 },
-  checkmarkText: { fontSize: 36, color: SUCCESS_GREEN_BRIGHT, fontWeight: '900' },
-  resultText: { color: AppPalette.danger, fontSize: 13, marginTop: 8, fontWeight: '600' },
+  checkmarkText: { fontSize: 36, color: palette.text, fontWeight: '700', fontFamily: fonts.mono },
+  resultText: { color: palette.textMuted, fontSize: 13, marginTop: 8, fontWeight: '600', fontFamily: fonts.mono },
   availableArea: { marginBottom: 20 },
-  availableWord: { backgroundColor: AppPalette.surface, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: AppPalette.border },
+  availableWord: { backgroundColor: palette.surface, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: palette.border },
   wordDim: { opacity: 0.3 },
-  availableWordText: { color: AppPalette.text, fontSize: 18, fontWeight: '600' },
+  availableWordText: { color: palette.text, fontSize: 18, fontWeight: '600', fontFamily: fonts.mono },
   checkBtn: { borderRadius: 20, padding: 18, alignItems: 'center' },
   checkBtnDisabled: { opacity: 0.3 },
-  checkBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },
-  decorChar: { fontSize: 120, color: 'rgba(255,255,255,0.07)', fontWeight: '900', marginBottom: 24 },
-  emptyCard: { backgroundColor: AppPalette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: AppPalette.border, marginBottom: 24, width: '100%' },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: AppPalette.text, marginBottom: 8, textAlign: 'center' },
-  emptySubtext: { fontSize: 14, color: AppPalette.textMuted, textAlign: 'center' },
+  checkBtnText: { color: palette.bg, fontSize: 14, fontWeight: '700', fontFamily: fonts.mono, letterSpacing: 1 },
+  decorChar: { fontSize: 120, color: palette.borderStrong, fontWeight: '900', marginBottom: 24, opacity: 0.4 },
+  emptyCard: { backgroundColor: palette.bgElevated, borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: palette.border, marginBottom: 24, width: '100%' },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: palette.text, marginBottom: 8, textAlign: 'center', fontFamily: fonts.mono },
+  emptySubtext: { fontSize: 14, color: palette.textMuted, textAlign: 'center', fontFamily: fonts.mono, lineHeight: 22 },
   finishedEmoji: { fontSize: 64, marginBottom: 16 },
-  finishedTitle: { fontSize: 28, fontWeight: '800', color: AppPalette.text, marginBottom: 8 },
-  finishedSubtitle: { fontSize: 16, color: AppPalette.textMuted, marginBottom: 30 },
+  finishedTitle: { fontSize: 28, fontWeight: '700', color: palette.text, marginBottom: 8, fontFamily: fonts.mono },
+  finishedSubtitle: { fontSize: 16, color: palette.textMuted, marginBottom: 30, fontFamily: fonts.mono },
   resultsRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
-  resultBox: { backgroundColor: AppPalette.surface, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 90 },
-  resultNumber: { fontSize: 28, fontWeight: '800', color: AppPalette.text },
-  resultLabel: { fontSize: 12, color: AppPalette.textMuted, marginTop: 4 },
-  backBtn: { backgroundColor: AppPalette.surfaceSoft, borderRadius: 20, paddingHorizontal: 32, paddingVertical: 14, borderWidth: 1, borderColor: AppPalette.borderStrong },
-  backBtnText: { color: AppPalette.text, fontSize: 16, fontWeight: '600' },
+  resultBox: { backgroundColor: palette.surface, borderRadius: 16, padding: 20, alignItems: 'center', minWidth: 90, borderWidth: 1, borderColor: palette.border },
+  resultNumber: { fontSize: 28, fontWeight: '700', color: palette.text, fontFamily: fonts.mono },
+  resultLabel: { fontSize: 11, color: palette.textMuted, marginTop: 4, fontFamily: fonts.mono },
+  backBtn: { backgroundColor: palette.bgElevated, borderRadius: 20, paddingHorizontal: 32, paddingVertical: 14, borderWidth: 1, borderColor: palette.borderStrong },
+  backBtnText: { color: palette.text, fontSize: 15, fontWeight: '600', fontFamily: fonts.mono },
   actionBtn: { borderRadius: 20, paddingHorizontal: 32, paddingVertical: 16 },
-  actionBtnText: { color: AppPalette.white, fontSize: 16, fontWeight: '700' },
+  actionBtnText: { color: palette.bg, fontSize: 14, fontWeight: '700', fontFamily: fonts.mono, letterSpacing: 1 },
 });
