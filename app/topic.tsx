@@ -4,8 +4,8 @@ import { useAppTheme } from '@/lib/AppThemeContext';
 import { getCache, setCache } from '@/lib/cache';
 import { buildActivities } from '@/lib/activity-config';
 import { useLanguage } from '@/lib/LanguageContext';
+import { loadPracticeWords } from '@/lib/practice-data';
 import { pushRecentTopic } from '@/lib/recent-topics';
-import { supabase } from '@/lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -30,25 +30,16 @@ export default function TopicScreen() {
       setWordCount(cached);
       setLoading(false);
 
-      supabase
-        .from('words')
-        .select('*', { count: 'exact', head: true })
-        .eq('topic_id', topicId)
-        .then(({ count }) => {
-          if (count !== null) {
-            setWordCount(count);
-            setCache(cacheKey, count);
-          }
-        });
+      loadPracticeWords({ topicId: topicId as string | undefined }).then((words) => {
+        setWordCount(words.length);
+        setCache(cacheKey, words.length);
+      });
       return;
     }
 
-    supabase
-      .from('words')
-      .select('*', { count: 'exact', head: true })
-      .eq('topic_id', topicId)
-      .then(({ count }) => {
-        const n = count || 0;
+    loadPracticeWords({ topicId: topicId as string | undefined })
+      .then((words) => {
+        const n = words.length;
         setWordCount(n);
         setCache(cacheKey, n);
         setLoading(false);

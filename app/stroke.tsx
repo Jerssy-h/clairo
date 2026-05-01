@@ -1,12 +1,11 @@
 import { useAppTheme } from '@/lib/AppThemeContext';
-import { clearCache, getCache, setCache } from '@/lib/cache';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
-import { supabase } from '@/lib/supabase';
+import { getMeaning, loadPracticeWords, PracticeWord, saveKnownProgress } from '@/lib/practice-data';
 import { HanziWriter, useHanziWriter } from '@jamsch/react-native-hanzi-writer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -23,14 +22,6 @@ const { height } = Dimensions.get('window');
 // 2 guided rounds (outline visible) + 2 blind rounds = 4 total
 const GUIDED_ROUNDS = 2;
 const TOTAL_ROUNDS = 4;
-
-type Word = {
-  id: string;
-  chinese: string;
-  pinyin: string;
-  english: string;
-  russian?: string;
-};
 
 type Phase = 'watch' | 'practice';
 
@@ -95,6 +86,8 @@ function CharacterWriter({
       writer.animator.animateCharacter({ delayBetweenStrokes: 400, strokeDuration: 600 });
     }, 500);
     return () => clearTimeout(timer);
+    // HanziWriter exposes mutable controller objects; this should run only for this mounted writer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Start quiz when in practice phase
@@ -123,6 +116,8 @@ function CharacterWriter({
       }, 300);
       return () => clearTimeout(timer);
     }
+    // Keep quiz ownership with the current mounted writer; adding writer.quiz restarts drawing mid-stroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   const handlePeek = () => {
@@ -253,7 +248,7 @@ export default function StrokeScreen() {
   const color = (topicColor as string) || '#D97706';
   const styles = createStyles(palette, fonts);
 
-  const [words, setWords] = useState<Word[]>([]);
+  const [words, setWords] = useState<PracticeWord[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [characterIndex, setCharacterIndex] = useState(0);
@@ -265,37 +260,23 @@ export default function StrokeScreen() {
   const [allDone, setAllDone] = useState(false);
   const [deviceId, setDeviceId] = useState('');
 
+  const fetchWords = useCallback(async () => {
+    const dataWords = await loadPracticeWords({
+      topicId: topicId as string | undefined,
+      allWords: allWords === '1',
+    });
+    setWords(dataWords);
+    setLoading(false);
+  }, [allWords, topicId]);
+
   useEffect(() => {
     getDeviceId().then(setDeviceId);
     fetchWords();
-  }, []);
-
-  const fetchWords = async () => {
-    const isAllWordsMode = allWords === '1';
-    const cacheKey = isAllWordsMode ? 'words_all' : `words_${topicId}`;
-    const cached = getCache<Word[]>(cacheKey);
-    if (cached) { setWords([...cached].sort(() => Math.random() - 0.5)); setLoading(false); return; }
-    const query = supabase.from('words').select('*');
-    const { data, error } = isAllWordsMode ? await query : await query.eq('topic_id', topicId);
-    if (error) console.error(error);
-    else {
-      const randomized = [...(data || [])].sort(() => Math.random() - 0.5);
-      setWords(randomized);
-      setCache(cacheKey, data || []);
-    }
-    setLoading(false);
-  };
+  }, [fetchWords]);
 
   const saveProgress = async (wordId: string) => {
     if (!deviceId) return;
-    const { error } = await supabase.from('progress').upsert({
-      device_id: deviceId,
-      word_id: wordId,
-      known: true,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'device_id,word_id' });
-    if (error) console.error(error.message);
-    clearCache('topics');
+    saveKnownProgress(wordId, true, deviceId);
   };
 
   const goTo = (i: number, nextCharacterIndex = 0) => {
@@ -412,7 +393,7 @@ export default function StrokeScreen() {
   const characters = Array.from(card.chinese).filter(Boolean);
   const activeCharacterIndex = reviewMode ? reviewCharacterIndex : characterIndex;
   const char = characters[activeCharacterIndex] ?? characters[0] ?? '';
-  const meaning = language === 'ru' ? (card.russian ?? card.english) : card.english;
+  const meaning = getMeaning(card, language);
   const isGuided = reviewMode ? reviewPass === 0 : round < GUIDED_ROUNDS;
   const effectiveRound = reviewMode ? (reviewPass === 0 ? 0 : GUIDED_ROUNDS) : round;
 

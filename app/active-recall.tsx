@@ -3,7 +3,7 @@ import PracticeHero from '@/components/practice/PracticeHero';
 import { buildActivities } from '@/lib/activity-config';
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { useLanguage } from '@/lib/LanguageContext';
-import { supabase } from '@/lib/supabase';
+import { loadPracticeWords } from '@/lib/practice-data';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
@@ -17,7 +17,7 @@ export default function ActiveRecallScreen() {
   const styles = createStyles(palette, fonts);
 
   useEffect(() => {
-    supabase.from('words').select('*', { count: 'exact', head: true }).then(({ count }) => setWordCount(count || 0));
+    loadPracticeWords({ allWords: true }).then((words) => setWordCount(words.length));
   }, []);
 
   const title = t.activeRecall;

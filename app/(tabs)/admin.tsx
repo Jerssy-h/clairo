@@ -3,9 +3,9 @@ import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { isAdmin } from '@/lib/auth';
-import { clearCache } from '@/lib/cache';
+import { clearCache, clearTopicContent } from '@/lib/cache';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -89,13 +89,6 @@ export default function AdminScreen() {
     if (authenticated) fetchTopics();
   }, [authenticated]);
 
-  useEffect(() => {
-    if (selectedTopic) {
-      fetchWords();
-      fetchSentences();
-    }
-  }, [selectedTopic]);
-
   const handleLogin = () => {
     if (ADMIN_PASSWORD && passwordInput === ADMIN_PASSWORD) {
       setAuthenticated(true);
@@ -105,22 +98,34 @@ export default function AdminScreen() {
     }
   };
 
+  const invalidateTopic = (topicId: string) => {
+    clearCache('topics');
+    clearTopicContent(topicId);
+  };
+
   const fetchTopics = async () => {
     const { data } = await supabase.from('topics').select('*').order('sort_order', { ascending: true });
     setTopics(data || []);
   };
 
-  const fetchWords = async () => {
+  const fetchWords = useCallback(async () => {
     if (!selectedTopic) return;
     const { data } = await supabase.from('words').select('*').eq('topic_id', selectedTopic.id);
     setWords(data || []);
-  };
+  }, [selectedTopic]);
 
-  const fetchSentences = async () => {
+  const fetchSentences = useCallback(async () => {
     if (!selectedTopic) return;
     const { data } = await supabase.from('sentences').select('*').eq('topic_id', selectedTopic.id);
     setSentences(data || []);
-  };
+  }, [selectedTopic]);
+
+  useEffect(() => {
+    if (selectedTopic) {
+      fetchWords();
+      fetchSentences();
+    }
+  }, [fetchSentences, fetchWords, selectedTopic]);
 
   const addTopic = async () => {
     if (!topicTitle || !topicEmoji) {
@@ -177,10 +182,7 @@ export default function AdminScreen() {
             setWords([]);
             setSentences([]);
           }
-          clearCache('topics');
-          clearCache(`words_${id}`);
-          clearCache(`sentences_${id}`);
-          clearCache(`word_map_${id}`);
+          invalidateTopic(id);
           fetchTopics();
         },
       },
@@ -232,8 +234,7 @@ export default function AdminScreen() {
       setPinyin('');
       setEnglish('');
       setWordRussian('');
-      clearCache(`words_${selectedTopic.id}`);
-      clearCache(`word_map_${selectedTopic.id}`);
+      invalidateTopic(selectedTopic.id);
       fetchWords();
     }
     setLoading(false);
@@ -267,8 +268,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setEditWord(null);
-      clearCache(`words_${editWord.topic_id}`);
-      clearCache(`word_map_${editWord.topic_id}`);
+      invalidateTopic(editWord.topic_id);
       fetchWords();
     }
     setLoading(false);
@@ -283,8 +283,7 @@ export default function AdminScreen() {
         onPress: async () => {
           await supabase.from('words').delete().eq('id', id);
           if (selectedTopic) {
-            clearCache(`words_${selectedTopic.id}`);
-            clearCache(`word_map_${selectedTopic.id}`);
+            invalidateTopic(selectedTopic.id);
           }
           fetchWords();
         },
@@ -317,7 +316,7 @@ export default function AdminScreen() {
     else {
       setRussian('');
       setChineseWords('');
-      clearCache(`sentences_${selectedTopic.id}`);
+      invalidateTopic(selectedTopic.id);
       fetchSentences();
     }
     setLoading(false);
@@ -338,7 +337,7 @@ export default function AdminScreen() {
     if (error) Alert.alert('Error', error.message);
     else {
       setEditSentence(null);
-      clearCache(`sentences_${editSentence.topic_id}`);
+      invalidateTopic(editSentence.topic_id);
       fetchSentences();
     }
     setLoading(false);
@@ -352,7 +351,7 @@ export default function AdminScreen() {
         style: 'destructive',
         onPress: async () => {
           await supabase.from('sentences').delete().eq('id', id);
-          if (selectedTopic) clearCache(`sentences_${selectedTopic.id}`);
+          if (selectedTopic) invalidateTopic(selectedTopic.id);
           fetchSentences();
         },
       },

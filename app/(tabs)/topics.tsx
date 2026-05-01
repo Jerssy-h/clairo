@@ -4,6 +4,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { fetchAndCacheTopics, getLocalTopics } from '@/lib/offline-topics';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,12 +18,21 @@ type Topic = {
   known_count: number;
 };
 
+type SortMode = 'default' | 'title' | 'progress';
+
+const titleCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+const getTopicProgress = (topic: Topic) =>
+  topic.word_count > 0 ? Math.round((topic.known_count / topic.word_count) * 100) : 0;
+
 export default function TopicsTabScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { palette, fonts, isDark } = useAppTheme();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [filterOpen, setFilterOpen] = useState(false);
   const enterAnim = useRef(new Animated.Value(0)).current;
   const styles = createStyles(palette, fonts);
 
@@ -49,7 +59,26 @@ export default function TopicsTabScreen() {
     }, [enterAnim, fetchTopics])
   );
 
-  const sortedTopics = useMemo(() => topics, [topics]);
+  const sortedTopics = useMemo(() => {
+    const items = [...topics];
+    if (sortMode === 'title') {
+      return items.sort((a, b) => titleCollator.compare(a.title, b.title));
+    }
+    if (sortMode === 'progress') {
+      return items.sort((a, b) => {
+        const progressDiff = getTopicProgress(b) - getTopicProgress(a);
+        return progressDiff || titleCollator.compare(a.title, b.title);
+      });
+    }
+    return items;
+  }, [sortMode, topics]);
+
+  const sortOptions: { mode: SortMode; label: string }[] = [
+    { mode: 'default', label: language === 'ru' ? 'Порядок' : 'Order' },
+    { mode: 'title', label: language === 'ru' ? 'Название' : 'Name' },
+    { mode: 'progress', label: language === 'ru' ? 'Прогресс' : 'Progress' },
+  ];
+  const selectedSortLabel = sortOptions.find((option) => option.mode === sortMode)?.label ?? sortOptions[0].label;
 
   return (
     <View style={[styles.container, { backgroundColor: palette.bg }]}>
@@ -87,7 +116,47 @@ export default function TopicsTabScreen() {
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>{sortedTopics.length} {t.total}</Text>
+            <View style={styles.filterWrap}>
+              <TouchableOpacity
+                style={[styles.filterButton, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}
+                onPress={() => setFilterOpen((open) => !open)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.filterButtonText, { color: palette.text }]}>
+                  {language === 'ru' ? 'Фильтр' : 'Filter'}
+                </Text>
+                <Ionicons name="settings-outline" size={15} color={palette.text} />
+              </TouchableOpacity>
+
+              {filterOpen ? (
+                <View style={[styles.filterMenu, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}>
+                  {sortOptions.map((option) => {
+                    const active = sortMode === option.mode;
+                    return (
+                      <TouchableOpacity
+                        key={option.mode}
+                        style={[styles.filterMenuItem, active && { backgroundColor: palette.surface }]}
+                        onPress={() => {
+                          setSortMode(option.mode);
+                          setFilterOpen(false);
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={[styles.filterMenuText, { color: active ? palette.text : palette.textMuted }]}>
+                          {option.label}
+                        </Text>
+                        {active ? <Ionicons name="checkmark" size={15} color={palette.text} /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
           </View>
+
+          <Text style={[styles.activeFilterLabel, { color: palette.textMuted }]}>
+            {language === 'ru' ? 'Сортировка:' : 'Sorted by:'} {selectedSortLabel}
+          </Text>
 
           {loading ? (
             <View style={styles.grid}>
@@ -104,7 +173,7 @@ export default function TopicsTabScreen() {
           ) : (
             <View style={styles.grid}>
               {sortedTopics.map((topic, index) => {
-                const progress = topic.word_count > 0 ? Math.round((topic.known_count / topic.word_count) * 100) : 0;
+                const progress = getTopicProgress(topic);
                 const remaining = topic.word_count - topic.known_count;
 
                 return (
@@ -174,8 +243,15 @@ const createStyles = (palette: any, fonts: any) =>
     copy: { fontSize: 14, lineHeight: 24, fontFamily: fonts.mono, marginBottom: 20, maxWidth: '92%' },
     recallButton: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 22 },
     recallButtonText: { fontSize: 12, letterSpacing: 1, fontFamily: fonts.mono, fontWeight: '700' },
-    sectionHeader: { marginBottom: 12 },
+    sectionHeader: { marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, zIndex: 5 },
     sectionLabel: { fontSize: 11, letterSpacing: 1.1, fontFamily: fonts.mono },
+    filterWrap: { position: 'relative', alignItems: 'flex-end' },
+    filterButton: { minHeight: 38, borderRadius: 14, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
+    filterButtonText: { fontSize: 11, letterSpacing: 0.8, fontFamily: fonts.mono, fontWeight: '700', textTransform: 'uppercase' },
+    filterMenu: { position: 'absolute', top: 44, right: 0, width: 168, borderWidth: 1, borderRadius: 14, padding: 4, zIndex: 20 },
+    filterMenuItem: { minHeight: 38, borderRadius: 10, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    filterMenuText: { fontSize: 11, letterSpacing: 0.6, fontFamily: fonts.mono, fontWeight: '700', textTransform: 'uppercase' },
+    activeFilterLabel: { fontSize: 10, letterSpacing: 0.7, fontFamily: fonts.mono, marginBottom: 14 },
     grid: { gap: 12 },
     placeholder: { height: 124, borderRadius: 24, borderWidth: 1 },
     emptyState: { borderWidth: 1, borderRadius: 28, padding: 24, alignItems: 'center' },

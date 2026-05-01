@@ -42,14 +42,6 @@ export const getCache = <T>(key: string): T | null => {
 };
 
 export const clearCache = (key: string) => {
-  // Only clear topics/progress — never clear content caches
-  if (
-    key.startsWith('words_') ||
-    key.startsWith('sentences_') ||
-    key.startsWith('word_map_')
-  ) {
-    return; // Ignore — content is stable
-  }
   cache.delete(key);
 };
 
@@ -63,4 +55,8 @@ export const clearTopicContent = (topicId: string) => {
   cache.delete(`words_${topicId}`);
   cache.delete(`sentences_${topicId}`);
   cache.delete(`word_map_${topicId}`);
+  cache.delete(`word_count_${topicId}`);
+  cache.delete('words_all');
+  cache.delete('sentences_all');
+  cache.delete('word_map_all');
 };

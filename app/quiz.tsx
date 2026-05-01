@@ -1,26 +1,13 @@
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
-import { supabase } from '@/lib/supabase';
-import { getLocalWords, pushProgressToServer, saveProgressLocal } from '@/lib/sync';
+import { getMeaning, loadPracticeWords, PracticeWord, saveKnownProgress, shuffle } from '@/lib/practice-data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Dimensions, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { height } = Dimensions.get('window');
-
-type Word = {
-  id: string;
-  chinese: string;
-  pinyin: string;
-  english: string;
-  russian?: string;
-};
-
-function shuffle<T>(array: T[]): T[] {
-  return [...array].sort(() => Math.random() - 0.5);
-}
 
 export default function QuizScreen() {
   const router = useRouter();
@@ -29,7 +16,7 @@ export default function QuizScreen() {
   const { topicId, topicTitle, allWords } = useLocalSearchParams();
   const styles = createStyles(palette, fonts);
 
-  const [words, setWords] = useState<Word[]>([]);
+  const [words, setWords] = useState<PracticeWord[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [options, setOptions] = useState<string[]>([]);
@@ -55,8 +42,6 @@ export default function QuizScreen() {
     }))
   ).current;
 
-  useEffect(() => { setup(); }, []);
-  useEffect(() => { if (words.length > 0) generateOptions(index); }, [words, index, language]);
   useEffect(() => {
     if (loading || words.length < 4 || options.length === 0) return;
 
@@ -114,50 +99,42 @@ export default function QuizScreen() {
     ]).start();
   }, [index, introCardOpacity, introCardScale, introCardTranslateY, introHeaderOpacity, introHeaderTranslateY, introOptions, loading, options, words.length]);
 
-  const getMeaning = (word: Word) =>
-    language === 'ru' ? (word.russian ?? word.english) : word.english;
-
-  const fetchWords = async () => {
-    // Сначала из локальной БД
-    const isAllWordsMode = allWords === '1';
-    const local = !isAllWordsMode ? getLocalWords(topicId as string) : [];
-    if (local.length > 0) {
-      setWords(shuffle(local));
-      setLoading(false);
-      return;
-    }
-    // Фоллбэк на Supabase
-    const query = supabase.from('words').select('*');
-    const { data } = isAllWordsMode ? await query : await query.eq('topic_id', topicId);
-    setWords(shuffle(data || []));
+  const fetchWords = useCallback(async () => {
+    const dataWords = await loadPracticeWords({
+      topicId: topicId as string | undefined,
+      allWords: allWords === '1',
+    });
+    setWords(dataWords);
     setLoading(false);
-  };
+  }, [allWords, topicId]);
 
-  const setup = async () => {
+  const setup = useCallback(async () => {
     const id = await getDeviceId();
     setDeviceId(id);
-    fetchWords();
-  };
+    await fetchWords();
+  }, [fetchWords]);
 
   const saveProgress = async (wordId: string, isKnown: boolean) => {
     if (!deviceId) return;
-    saveProgressLocal(deviceId, wordId, isKnown);
-    pushProgressToServer(deviceId, wordId, isKnown);
+    saveKnownProgress(wordId, isKnown, deviceId);
   };
 
-  const generateOptions = (currentIndex: number) => {
+  const generateOptions = useCallback((currentIndex: number) => {
     const current = words[currentIndex];
-    const others = words.filter((_, i) => i !== currentIndex).map(w => getMeaning(w));
+    const others = words.filter((_, i) => i !== currentIndex).map(w => getMeaning(w, language));
     const shuffledOthers = shuffle(others).slice(0, 3);
-    const allOptions = shuffle([getMeaning(current), ...shuffledOthers]);
+    const allOptions = shuffle([getMeaning(current, language), ...shuffledOthers]);
     setOptions(allOptions);
     setSelected(null);
-  };
+  }, [language, words]);
+
+  useEffect(() => { setup(); }, [setup]);
+  useEffect(() => { if (words.length > 0) generateOptions(index); }, [words, index, generateOptions]);
 
   const handleAnswer = (answer: string) => {
     if (selected || savingAnswer) return;
     setSelected(answer);
-    const correctAnswer = getMeaning(words[index]);
+    const correctAnswer = getMeaning(words[index], language);
     const isCorrect = answer === correctAnswer;
 
     setSavingAnswer(true);
@@ -174,14 +151,14 @@ export default function QuizScreen() {
 
   const getOptionStyle = (option: string) => {
     if (!selected) return styles.optionBtn;
-    if (option === getMeaning(words[index])) return [styles.optionBtn, styles.optionCorrect];
+    if (option === getMeaning(words[index], language)) return [styles.optionBtn, styles.optionCorrect];
     if (option === selected) return [styles.optionBtn, styles.optionWrong];
     return [styles.optionBtn, styles.optionDim];
   };
 
   const getOptionTextStyle = (option: string) => {
     if (!selected) return styles.optionText;
-    if (option === getMeaning(words[index])) return [styles.optionText, { color: palette.text }];
+    if (option === getMeaning(words[index], language)) return [styles.optionText, { color: palette.text }];
     if (option === selected) return [styles.optionText, { color: palette.textMuted }];
     return [styles.optionText, { opacity: 0.4 }];
   };

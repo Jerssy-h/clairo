@@ -49,9 +49,7 @@ export default function HomeScreen() {
   const enterAnim = useRef(new Animated.Value(0)).current;
   const styles = createStyles(palette, fonts);
 
-  const loadDashboard = useCallback(async () => {
-    if (!isReady) return;
-
+  const loadDashboardData = useCallback(async () => {
     try {
       const local = await getLocalTopics();
       if (local?.length) {
@@ -69,7 +67,12 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  }, [isReady]);
+  }, []);
+
+  const loadDashboard = useCallback(async () => {
+    if (!isReady) return;
+    await loadDashboardData();
+  }, [isReady, loadDashboardData]);
 
   useEffect(() => {
     async function prepare() {
@@ -84,7 +87,7 @@ export default function HomeScreen() {
         }
 
         setIsReady(true);
-        syncAllData().then(() => loadDashboard());
+        syncAllData().then(() => loadDashboardData());
 
         if (!splashShown) {
           splashShown = true;
@@ -103,7 +106,7 @@ export default function HomeScreen() {
     }
 
     prepare();
-  }, [enterAnim, loadDashboard, router]);
+  }, [enterAnim, loadDashboardData, router]);
 
   useFocusEffect(
     useCallback(() => {

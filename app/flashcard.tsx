@@ -1,8 +1,7 @@
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
-import { supabase } from '@/lib/supabase';
-import { getLocalWords, pushProgressToServer, saveProgressLocal } from '@/lib/sync';
+import { getMeaning, loadPracticeWords, PracticeWord, saveKnownProgress } from '@/lib/practice-data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -19,14 +18,6 @@ import {
 
 const { height } = Dimensions.get('window');
 
-type Word = {
-  id: string;
-  chinese: string;
-  pinyin: string;
-  english: string;
-  russian?: string;
-};
-
 export default function FlashcardScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -34,7 +25,7 @@ export default function FlashcardScreen() {
   const { topicId, topicTitle, allWords } = useLocalSearchParams();
   const styles = createStyles(palette, fonts);
 
-  const [words, setWords] = useState<Word[]>([]);
+  const [words, setWords] = useState<PracticeWord[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -53,17 +44,11 @@ export default function FlashcardScreen() {
     async function setup() {
       const id = await getDeviceId();
       setDeviceId(id);
-      const isAllWordsMode = allWords === '1';
-      const local = !isAllWordsMode ? getLocalWords(topicId as string) : [];
-      let dataWords = local && local.length > 0 ? local : [];
-
-      if (dataWords.length === 0) {
-        const query = supabase.from('words').select('*');
-        const { data } = isAllWordsMode ? await query : await query.eq('topic_id', topicId);
-        dataWords = data || [];
-      }
-      
-      setWords([...dataWords].sort(() => Math.random() - 0.5));
+      const dataWords = await loadPracticeWords({
+        topicId: topicId as string | undefined,
+        allWords: allWords === '1',
+      });
+      setWords(dataWords);
       setLoading(false);
     }
     setup();
@@ -87,8 +72,7 @@ export default function FlashcardScreen() {
 
     const currentWord = words[index];
     if (currentWord && deviceId) {
-      saveProgressLocal(deviceId, currentWord.id, isKnown);
-      pushProgressToServer(deviceId, currentWord.id, isKnown);
+      saveKnownProgress(currentWord.id, isKnown, deviceId);
     }
 
     Animated.parallel([
@@ -198,7 +182,7 @@ export default function FlashcardScreen() {
   }
 
   const card = words[index];
-  const meaning = language === 'ru' ? (card.russian ?? card.english) : card.english;
+  const meaning = getMeaning(card, language);
   const progress = ((index + 1) / words.length) * 100;
 
   return (

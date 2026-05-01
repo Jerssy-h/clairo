@@ -1,11 +1,10 @@
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { getDeviceId } from '@/lib/device';
 import { useLanguage } from '@/lib/LanguageContext';
-import { supabase } from '@/lib/supabase';
-import { getLocalSentences, getLocalWords, pushProgressToServer, saveProgressLocal } from '@/lib/sync';
+import { loadPracticeSentences, PracticeSentence, saveKnownProgress } from '@/lib/practice-data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -18,13 +17,6 @@ import {
 
 const { height } = Dimensions.get('window');
 
-type Sentence = {
-  id: string;
-  russian: string;
-  chinese_words: string[];
-  correct_order: string[];
-};
-
 export default function SentenceScreen() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -33,7 +25,7 @@ export default function SentenceScreen() {
   const color = (topicColor as string) || '#059669';
   const styles = createStyles(palette, fonts);
 
-  const [sentences, setSentences] = useState<Sentence[]>([]);
+  const [sentences, setSentences] = useState<PracticeSentence[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,8 +42,6 @@ export default function SentenceScreen() {
   const checkmarkOpacity = useRef(new Animated.Value(0)).current;
   const wordAnims = useRef<Animated.Value[]>([]).current;
 
-  useEffect(() => { setup(); }, []);
-
   useEffect(() => {
     if (sentences.length > 0) {
       setAvailable([...sentences[index].chinese_words]);
@@ -61,54 +51,32 @@ export default function SentenceScreen() {
       checkmarkScale.setValue(0);
       checkmarkOpacity.setValue(0);
     }
-  }, [sentences, index]);
+  }, [checkmarkOpacity, checkmarkScale, gradientAnim, sentences, index]);
 
   useEffect(() => {
     while (wordAnims.length < selected.length) {
       wordAnims.push(new Animated.Value(1));
     }
-  }, [selected]);
+  }, [selected, wordAnims]);
 
-  const buildWordIdMapping = (words: any[]) => {
-    const mapping: Record<string, string> = {};
-    words.forEach((w) => { if (w.chinese && w.id) mapping[w.chinese] = w.id; });
-    setWordIdByChinese(mapping);
-  };
-
-  const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
-
-  const fetchSentences = async () => {
-    // Сначала из локальной БД
-    const isAllWordsMode = allWords === '1';
-    const localSentences = !isAllWordsMode ? getLocalSentences(topicId as string) : [];
-    if (localSentences.length > 0) {
-      setSentences(shuffle(localSentences));
-      setLoading(false);
-
-      // Маппинг слов из локальной БД
-      const localWords = getLocalWords(topicId as string);
-      buildWordIdMapping(localWords);
-      return;
-    }
-
-    // Фоллбэк на Supabase
-    const sentenceQuery = supabase.from('sentences').select('*');
-    const { data: sentenceData } = isAllWordsMode ? await sentenceQuery : await sentenceQuery.eq('topic_id', topicId);
-    setSentences(shuffle(sentenceData || []));
-
-    const wordQuery = supabase.from('words').select('id, chinese');
-    const { data: wordData } = isAllWordsMode ? await wordQuery : await wordQuery.eq('topic_id', topicId);
-    buildWordIdMapping(wordData || []);
-
+  const fetchSentences = useCallback(async () => {
+    const data = await loadPracticeSentences({
+      topicId: topicId as string | undefined,
+      allWords: allWords === '1',
+    });
+    setSentences(data.sentences);
+    setWordIdByChinese(data.wordIdByChinese);
     setLoading(false);
-  };
+  }, [allWords, topicId]);
 
-  const setup = async () => {
+  const setup = useCallback(async () => {
     const id = await getDeviceId();
     setDeviceId(id);
     setLoading(true);
     await fetchSentences();
-  };
+  }, [fetchSentences]);
+
+  useEffect(() => { setup(); }, [setup]);
 
   const playSuccessAnimation = () => {
     const bounces = selected.map((_, i) => {
@@ -164,8 +132,7 @@ export default function SentenceScreen() {
       );
       if (isCorrect && deviceId && targetWordIds.length > 0) {
         for (const wordId of targetWordIds) {
-          saveProgressLocal(deviceId, wordId, true);
-          pushProgressToServer(deviceId, wordId, true);
+          saveKnownProgress(wordId, true, deviceId);
         }
       }
     } finally {

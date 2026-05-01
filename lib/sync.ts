@@ -93,8 +93,22 @@ export const getLocalWords = (topicId: string) => {
   return rows as any[];
 };
 
+export const getAllLocalWords = () => {
+  const rows = db.getAllSync(`SELECT * FROM words`);
+  return rows as any[];
+};
+
 export const getLocalSentences = (topicId: string) => {
   const rows = db.getAllSync(`SELECT * FROM sentences WHERE topic_id = ?`, [topicId]);
+  return rows.map((s: any) => ({
+    ...s,
+    chinese_words: JSON.parse(s.chinese_words || '[]'),
+    correct_order: JSON.parse(s.correct_order || '[]'),
+  }));
+};
+
+export const getAllLocalSentences = () => {
+  const rows = db.getAllSync(`SELECT * FROM sentences`);
   return rows.map((s: any) => ({
     ...s,
     chinese_words: JSON.parse(s.chinese_words || '[]'),
