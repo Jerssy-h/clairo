@@ -1,5 +1,4 @@
 import LanguagePicker from '@/components/LanguagePicker';
-import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { UpdateChecker } from '@/components/UpdateChecker';
 import { useAppTheme } from '@/lib/AppThemeContext';
@@ -10,11 +9,13 @@ import { fetchAndCacheTopics, getLocalTopics } from '@/lib/offline-topics';
 import { getRecentTopicIds } from '@/lib/recent-topics';
 import { syncAllData } from '@/lib/sync';
 import { getUsername, syncUsernameToSupabase } from '@/lib/user';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -32,6 +33,7 @@ type Topic = {
   known_count: number;
 };
 
+const mascot = require('@/assets/images/clairo_panda_v2.png');
 let splashShown = false;
 
 export default function HomeScreen() {
@@ -180,17 +182,18 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.topBar}>
-            <View style={styles.brand}>
-              <TouchableOpacity onPress={() => adminMode && router.push('/admin')} activeOpacity={adminMode ? 0.7 : 1}>
-                <Logo size={42} />
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.brand}
+              onPress={() => adminMode && router.push('/admin')}
+              activeOpacity={adminMode ? 0.7 : 1}
+            >
               <View>
                 <Text style={[styles.brandTitle, { color: palette.text }]}>CLAIRO</Text>
                 <Text style={[styles.brandMeta, { color: palette.textMuted }]}>
                   {language === 'ru' ? 'labs' : 'labs'}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
             <View style={styles.controls}>
               <ThemeToggle />
               <LanguagePicker />
@@ -198,41 +201,53 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.heroBlock}>
+            <LinearGradient
+              colors={isDark ? ['#263B63', '#16213E'] : ['#FFFFFF', '#EAF9FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.heroRibbonOne} />
+            <View style={styles.heroRibbonTwo} />
+            <View style={styles.heroMascotPlate} />
             <Text style={[styles.heroTitle, { color: palette.text }]}>
               {language === 'ru'
-                ? `Мы лаборатория изучения\nкитайского.`
-                : `We are a Chinese\nlearning lab.`}
+                ? `Китайский,\nкак игра.`
+                : `Chinese,\nmade playful.`}
             </Text>
             <Text style={[styles.heroCopy, { color: palette.textSoft }]}>
               {language === 'ru'
                 ? `Привет, ${heroName}. Открывай тему, запускай общий повтор и возвращайся к сложным словам.`
                 : `Hi, ${heroName}. Open a topic, run active recall, and return to the words that need work.`}
             </Text>
+            <Image source={mascot} style={styles.heroMascot} resizeMode="contain" />
           </View>
 
           <View style={styles.statsRow}>
-            <View style={[styles.statCard, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}>
-              <Text style={[styles.statLabel, { color: palette.textMuted }]}>{statLabels.words}</Text>
-              <Text style={[styles.statValue, { color: palette.text }]}>{totalWords}</Text>
+            <View style={[styles.statCard, { backgroundColor: '#19A7CE' }]}>
+              <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.78)' }]}>{statLabels.words}</Text>
+              <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{totalWords}</Text>
             </View>
-            <View style={[styles.statCard, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}>
-              <Text style={[styles.statLabel, { color: palette.textMuted }]}>{statLabels.known}</Text>
-              <Text style={[styles.statValue, { color: palette.text }]}>{totalKnown}</Text>
+            <View style={[styles.statCard, { backgroundColor: '#20C997' }]}>
+              <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.78)' }]}>{statLabels.known}</Text>
+              <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{totalKnown}</Text>
             </View>
-            <View style={[styles.statCard, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}>
-              <Text style={[styles.statLabel, { color: palette.textMuted }]}>{statLabels.progress}</Text>
-              <Text style={[styles.statValue, { color: palette.text }]}>{overallProgress}%</Text>
+            <View style={[styles.statCard, { backgroundColor: '#FF8A3D' }]}>
+              <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.78)' }]}>{statLabels.progress}</Text>
+              <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{overallProgress}%</Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryPanel, { borderColor: palette.borderStrong, backgroundColor: palette.bgElevated }]}
-            onPress={() => router.push('/active-recall')}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.panelEyebrow, { color: palette.textMuted }]}>◐ {t.activeRecall}</Text>
-            <Text style={[styles.panelTitle, { color: palette.text }]}>{t.activeRecallTitle}</Text>
-            <Text style={[styles.panelText, { color: palette.textMuted }]}>
+          <TouchableOpacity style={styles.primaryPanel} onPress={() => router.push('/active-recall')} activeOpacity={0.86}>
+            <LinearGradient
+              colors={['#7C5CFF', '#19C2FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <Text style={styles.panelEyebrow}>◐ {t.activeRecall}</Text>
+            <Text style={styles.panelTitle}>{t.activeRecallTitle}</Text>
+            <Text style={styles.panelText}>
               {t.flashcards} · {t.quiz} · {t.sentenceBuilder} · {t.strokes}
             </Text>
           </TouchableOpacity>
@@ -315,15 +330,15 @@ function SectionTitle({
   label: string;
   action?: string;
   onPress?: () => void;
-  palette: { text: string; textMuted: string };
+  palette: { text: string; tint: string };
   fonts: { mono?: string; sans?: string; serif?: string; rounded?: string };
 }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 30 }}>
-      <Text style={{ color: palette.text, fontFamily: fonts.mono, fontSize: 15, letterSpacing: 1 }}>{label.toUpperCase()}</Text>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, marginTop: 32 }}>
+      <Text style={{ color: palette.text, fontFamily: fonts.rounded, fontSize: 18, fontWeight: '900' }}>{label}</Text>
       {action && onPress ? (
         <TouchableOpacity onPress={onPress}>
-          <Text style={{ color: palette.textMuted, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1 }}>{action.toUpperCase()}</Text>
+          <Text style={{ color: palette.tint, fontFamily: fonts.rounded, fontSize: 12, fontWeight: '900' }}>{action}</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -334,15 +349,16 @@ const createStyles = (palette: any, fonts: any) =>
   StyleSheet.create({
     container: { flex: 1 },
     loadingShell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    scroll: { padding: 20, paddingTop: 54, paddingBottom: 44 },
+    scroll: { paddingHorizontal: 18, paddingTop: 56, paddingBottom: 118 },
     shell: { gap: 0 },
     topBar: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
       flexWrap: 'wrap',
-      rowGap: 12,
+      rowGap: 14,
       columnGap: 12,
+      marginBottom: 22,
     },
     brand: {
       flexDirection: 'row',
@@ -353,8 +369,8 @@ const createStyles = (palette: any, fonts: any) =>
       flex: 1,
       paddingRight: 8,
     },
-    brandTitle: { fontSize: 15, letterSpacing: 2.2, fontFamily: fonts.mono, fontWeight: '700' },
-    brandMeta: { fontSize: 10, letterSpacing: 1.2, fontFamily: fonts.mono, marginTop: 3 },
+    brandTitle: { fontSize: 17, fontFamily: fonts.rounded, fontWeight: '900' },
+    brandMeta: { fontSize: 11, fontFamily: fonts.rounded, fontWeight: '800', marginTop: 3 },
     controls: {
       flexDirection: 'row',
       gap: 8,
@@ -363,29 +379,97 @@ const createStyles = (palette: any, fonts: any) =>
       flexShrink: 0,
       marginLeft: 'auto',
     },
-    heroBlock: { paddingTop: 80, paddingBottom: 34 },
-    heroTitle: { fontSize: 34, lineHeight: 44, fontFamily: fonts.mono, fontWeight: '500', marginBottom: 18 },
-    heroCopy: { fontSize: 13, lineHeight: 22, fontFamily: fonts.mono, maxWidth: '82%' },
-    statsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-    statCard: { flex: 1, minWidth: '30%', borderWidth: 1, borderRadius: 22, padding: 14 },
-    statLabel: { fontSize: 10, letterSpacing: 1.2, fontFamily: fonts.mono, marginBottom: 10 },
-    statValue: { fontSize: 24, fontFamily: fonts.mono, fontWeight: '600' },
-    primaryPanel: { borderWidth: 1, borderRadius: 26, padding: 18, marginTop: 22 },
-    panelEyebrow: { fontSize: 10, letterSpacing: 1.1, fontFamily: fonts.mono, marginBottom: 10 },
-    panelTitle: { fontSize: 24, lineHeight: 31, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 8 },
-    panelText: { fontSize: 11, lineHeight: 18, fontFamily: fonts.mono },
+    heroBlock: {
+      minHeight: 286,
+      borderRadius: 32,
+      paddingHorizontal: 22,
+      paddingTop: 24,
+      paddingBottom: 24,
+      overflow: 'hidden',
+      justifyContent: 'flex-end',
+      marginBottom: 20,
+      shadowColor: '#122033',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.14,
+      shadowRadius: 18,
+      elevation: 4,
+    },
+    heroRibbonOne: {
+      position: 'absolute',
+      width: 210,
+      height: 58,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255,209,102,0.55)',
+      right: -40,
+      top: 26,
+      transform: [{ rotate: '-18deg' }],
+    },
+    heroRibbonTwo: {
+      position: 'absolute',
+      width: 190,
+      height: 52,
+      borderRadius: 22,
+      backgroundColor: 'rgba(32,201,151,0.28)',
+      left: -58,
+      bottom: 24,
+      transform: [{ rotate: '16deg' }],
+    },
+    heroMascotPlate: {
+      position: 'absolute',
+      right: 12,
+      top: 18,
+      width: 142,
+      height: 142,
+      borderRadius: 34,
+      backgroundColor: 'rgba(255,255,255,0.34)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.42)',
+      transform: [{ rotate: '7deg' }],
+    },
+    heroMascot: { position: 'absolute', right: 16, top: 20, width: 132, height: 132 },
+    heroTitle: { fontSize: 35, lineHeight: 41, fontFamily: fonts.rounded, fontWeight: '900', marginBottom: 14, maxWidth: '64%' },
+    heroCopy: { fontSize: 14, lineHeight: 22, fontFamily: fonts.sans, fontWeight: '600', maxWidth: '86%' },
+    statsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginBottom: 22 },
+    statCard: {
+      flex: 1,
+      minWidth: '30%',
+      borderRadius: 22,
+      paddingHorizontal: 14,
+      paddingVertical: 16,
+      shadowColor: '#122033',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 14,
+      elevation: 3,
+    },
+    statLabel: { fontSize: 10, fontFamily: fonts.rounded, fontWeight: '900', marginBottom: 10 },
+    statValue: { fontSize: 25, fontFamily: fonts.rounded, fontWeight: '900' },
+    primaryPanel: {
+      borderRadius: 28,
+      padding: 20,
+      marginBottom: 4,
+      overflow: 'hidden',
+      shadowColor: '#122033',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.14,
+      shadowRadius: 18,
+      elevation: 4,
+    },
+    panelEyebrow: { fontSize: 12, fontFamily: fonts.rounded, fontWeight: '900', marginBottom: 10, color: 'rgba(255,255,255,0.82)' },
+    panelTitle: { fontSize: 25, lineHeight: 31, fontFamily: fonts.rounded, fontWeight: '900', marginBottom: 8, color: '#FFFFFF' },
+    panelText: { fontSize: 12, lineHeight: 18, fontFamily: fonts.sans, fontWeight: '700', color: 'rgba(255,255,255,0.82)' },
     placeholderWrap: { gap: 10 },
     placeholder: { height: 92, borderRadius: 22, borderWidth: 1 },
     emptyBlock: { borderWidth: 1, borderRadius: 22, padding: 18 },
     emptyText: { fontSize: 13, lineHeight: 22, fontFamily: fonts.mono },
     list: { gap: 10 },
     topicRow: { borderWidth: 1, borderRadius: 22, padding: 16, flexDirection: 'row', alignItems: 'center' },
-    topicSymbol: { width: 38, fontSize: 20, fontFamily: fonts.mono, fontWeight: '700' },
+    topicSymbol: { width: 38, fontSize: 22, fontFamily: fonts.rounded, fontWeight: '900' },
     topicCopy: { flex: 1 },
-    topicTitle: { fontSize: 18, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 4 },
-    topicMeta: { fontSize: 12, fontFamily: fonts.mono, lineHeight: 18 },
-    topicAction: { fontSize: 16, fontFamily: fonts.mono },
+    topicTitle: { fontSize: 18, fontFamily: fonts.rounded, fontWeight: '900', marginBottom: 4 },
+    topicMeta: { fontSize: 12, fontFamily: fonts.sans, lineHeight: 18, fontWeight: '700' },
+    topicAction: { fontSize: 16, fontFamily: fonts.rounded, fontWeight: '900' },
     recommendation: { borderWidth: 1, borderRadius: 22, padding: 16 },
-    recommendationTitle: { fontSize: 16, fontFamily: fonts.mono, fontWeight: '600', marginBottom: 6 },
-    recommendationBody: { fontSize: 12, lineHeight: 20, fontFamily: fonts.mono },
+    recommendationTitle: { fontSize: 17, fontFamily: fonts.rounded, fontWeight: '900', marginBottom: 6 },
+    recommendationBody: { fontSize: 12, lineHeight: 20, fontFamily: fonts.sans, fontWeight: '700' },
   });

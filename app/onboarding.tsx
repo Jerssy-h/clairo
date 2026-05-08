@@ -1,4 +1,4 @@
-import Logo from '@/components/Logo';
+`import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { markOnboardingDone, setUsername, syncUsernameToSupabase } from '@/lib/user';

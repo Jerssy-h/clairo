@@ -22,8 +22,44 @@ const { height } = Dimensions.get('window');
 // 2 guided rounds (outline visible) + 2 blind rounds = 4 total
 const GUIDED_ROUNDS = 2;
 const TOTAL_ROUNDS = 4;
+const HANZI_DATA_SOURCES = [
+  'https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0',
+  'https://unpkg.com/hanzi-writer-data@2.0',
+];
+const HANZI_LOAD_TIMEOUT_MS = 8000;
 
 type Phase = 'watch' | 'practice';
+
+const isHanziCharacter = (char: string) => /[\u3400-\u9FFF\uF900-\uFAFF]/.test(char);
+
+const getHanziCharacters = (value?: string) => Array.from(value ?? '').filter(isHanziCharacter);
+
+const loadHanziCharacterData = async (char: string) => {
+  let lastError: unknown;
+
+  for (const source of HANZI_DATA_SOURCES) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), HANZI_LOAD_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${source}/${encodeURIComponent(char)}.json`, {
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Hanzi data unavailable for ${char}: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(`Hanzi data unavailable for ${char}`);
+};
 
 // ─── Verified API from official readme ──────────────────────────────────────
 // useHanziWriter({ character, loader })
@@ -62,15 +98,13 @@ function CharacterWriter({
   const styles = createStyles(palette, fonts);
   const writer = useHanziWriter({
     character: char,
-    loader: (c) =>
-      fetch(`https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/${c}.json`).then((r) => r.json()),
+    loader: loadHanziCharacterData,
   });
 
   // Second writer just for the peek outline overlay
   const peekWriter = useHanziWriter({
     character: char,
-    loader: (c) =>
-      fetch(`https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/${c}.json`).then((r) => r.json()),
+    loader: loadHanziCharacterData,
   });
 
   const animatorState = writer.animator.useStore((s) => s.state);
@@ -265,7 +299,7 @@ export default function StrokeScreen() {
       topicId: topicId as string | undefined,
       allWords: allWords === '1',
     });
-    setWords(dataWords);
+    setWords(dataWords.filter((word) => getHanziCharacters(word.chinese).length > 0));
     setLoading(false);
   }, [allWords, topicId]);
 
@@ -303,7 +337,7 @@ export default function StrokeScreen() {
   };
 
   const handleReviewComplete = () => {
-    const characters = Array.from(words[index]?.chinese ?? '').filter(Boolean);
+    const characters = getHanziCharacters(words[index]?.chinese);
     const hasNextReviewCharacter = reviewCharacterIndex < characters.length - 1;
 
     if (hasNextReviewCharacter) {
@@ -329,7 +363,7 @@ export default function StrokeScreen() {
     const next = round + 1;
     if (next >= TOTAL_ROUNDS) {
       const currentWord = words[index];
-      const characters = Array.from(currentWord?.chinese ?? '').filter(Boolean);
+      const characters = getHanziCharacters(currentWord?.chinese);
       const hasNextCharacter = characterIndex < characters.length - 1;
 
       if (hasNextCharacter) {
@@ -390,7 +424,7 @@ export default function StrokeScreen() {
   }
 
   const card = words[index];
-  const characters = Array.from(card.chinese).filter(Boolean);
+  const characters = getHanziCharacters(card.chinese);
   const activeCharacterIndex = reviewMode ? reviewCharacterIndex : characterIndex;
   const char = characters[activeCharacterIndex] ?? characters[0] ?? '';
   const meaning = getMeaning(card, language);

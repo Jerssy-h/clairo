@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function ActivityCard({
-  color: _color,
+  color,
   icon,
   title,
   subtitle,
@@ -34,7 +34,7 @@ export default function ActivityCard({
       disabled={locked}
     >
       <LinearGradient
-        colors={[palette.bgElevated, palette.bgElevated]}
+        colors={[color, palette.tint]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
@@ -42,19 +42,19 @@ export default function ActivityCard({
       <Text style={styles.cardBgIcon}>{icon}</Text>
 
       <View style={styles.cardTopRow}>
-        <View style={[styles.cardIconWrap, { borderColor: palette.borderStrong, backgroundColor: palette.surface }]}>
-          <Text style={[styles.cardIcon, { color: palette.text, fontFamily: fonts.mono }]}>{icon}</Text>
+        <View style={styles.cardIconWrap}>
+          <Text style={[styles.cardIcon, { fontFamily: fonts.rounded }]}>{icon}</Text>
         </View>
         {tag ? (
-          <View style={[styles.tag, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <Text style={[styles.tagText, { color: palette.textMuted, fontFamily: fonts.mono }]}>{tag}</Text>
+          <View style={styles.tag}>
+            <Text style={[styles.tagText, { fontFamily: fonts.rounded }]}>{tag}</Text>
           </View>
         ) : null}
       </View>
 
       <View style={styles.cardContent}>
-        <Text style={[styles.cardTitle, { color: palette.text, fontFamily: fonts.mono }]}>{title}</Text>
-        <Text style={[styles.cardSubtitle, { color: palette.textMuted, fontFamily: fonts.mono }]}>{subtitle}</Text>
+        <Text style={[styles.cardTitle, { fontFamily: fonts.rounded }]}>{title}</Text>
+        <Text style={[styles.cardSubtitle, { fontFamily: fonts.sans }]}>{subtitle}</Text>
       </View>
 
       {locked ? (
@@ -73,10 +73,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: '#19A7CE',
     padding: 16,
+    shadowColor: '#122033',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 4,
   },
   gridCardLocked: {
     opacity: 0.5,
@@ -86,7 +89,7 @@ const styles = StyleSheet.create({
     bottom: -14,
     right: -6,
     fontSize: 100,
-    color: 'rgba(127,127,127,0.08)',
+    color: 'rgba(255,255,255,0.16)',
     fontWeight: '900',
     lineHeight: 112,
   },
@@ -101,24 +104,29 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.24)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardIcon: {
     fontSize: 28,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
   tag: {
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.26)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   tagText: {
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    color: '#FFFFFF',
   },
   cardContent: {
     flex: 1,
@@ -128,13 +136,14 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: -0.2,
+    color: '#FFFFFF',
   },
   cardSubtitle: {
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 17,
     maxWidth: '85%',
+    color: 'rgba(255,255,255,0.82)',
   },
   lockBadge: {
     position: 'absolute',

@@ -17,7 +17,7 @@ export default function PracticeHero({
   title,
   subtitle,
   backgroundChar,
-  accentColor: _accentColor,
+  accentColor,
   badges,
 }: Props) {
   const router = useRouter();
@@ -27,22 +27,22 @@ export default function PracticeHero({
     <>
       <Text style={styles.bgChar}>{backgroundChar}</Text>
       <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}>
-        <Text style={[styles.backArrow, { color: palette.text, fontFamily: fonts.mono }]}>←</Text>
+        <Text style={[styles.backArrow, { color: palette.text, fontFamily: fonts.rounded }]}>←</Text>
       </TouchableOpacity>
 
-      <View style={[styles.heroCard, { backgroundColor: palette.bgElevated, borderColor: palette.borderStrong }]}>
+      <View style={styles.heroCard}>
         <LinearGradient
-          colors={[palette.bgElevated, palette.bgElevated]}
+          colors={[accentColor, palette.tint]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
-        <Text style={[styles.heroTitle, { color: palette.text, fontFamily: fonts.mono }]}>{title}</Text>
-        {subtitle ? <Text style={[styles.heroSubtitle, { color: palette.textMuted, fontFamily: fonts.mono }]}>{subtitle}</Text> : null}
+        <Text style={[styles.heroTitle, { fontFamily: fonts.rounded }]}>{title}</Text>
+        {subtitle ? <Text style={[styles.heroSubtitle, { fontFamily: fonts.sans }]}>{subtitle}</Text> : null}
         <View style={styles.badgeRow}>
           {badges.map((badge) => (
-            <View key={badge} style={[styles.badge, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-              <Text style={[styles.badgeText, { color: palette.textSoft, fontFamily: fonts.mono }]}>{badge}</Text>
+            <View key={badge} style={styles.badge}>
+              <Text style={[styles.badgeText, { fontFamily: fonts.rounded }]}>{badge}</Text>
             </View>
           ))}
         </View>
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   bgChar: {
     position: 'absolute',
     fontSize: 300,
-    color: 'rgba(255,255,255,0.03)',
+    color: 'rgba(127,127,127,0.08)',
     fontWeight: '900',
     top: height * 0.04,
     alignSelf: 'center',
@@ -78,20 +78,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     padding: 20,
-    borderWidth: 1,
     marginBottom: 28,
+    shadowColor: '#122033',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 4,
   },
   heroTitle: {
     fontSize: 34,
     fontWeight: '700',
-    letterSpacing: -1,
     marginBottom: 8,
+    color: '#FFFFFF',
   },
   heroSubtitle: {
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 16,
     maxWidth: '92%',
+    color: 'rgba(255,255,255,0.84)',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -103,9 +108,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(255,255,255,0.26)',
   },
   badgeText: {
     fontSize: 11,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
