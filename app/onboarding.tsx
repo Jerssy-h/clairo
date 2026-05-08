@@ -1,4 +1,4 @@
-`import Logo from '@/components/Logo';
+import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAppTheme } from '@/lib/AppThemeContext';
 import { markOnboardingDone, setUsername, syncUsernameToSupabase } from '@/lib/user';
@@ -40,8 +40,8 @@ export default function OnboardingScreen() {
     }
     const trimmed = name.trim();
     await setUsername(trimmed);
-    await syncUsernameToSupabase(trimmed);
     await markOnboardingDone();
+    syncUsernameToSupabase(trimmed);
     router.replace('/(tabs)');
   };
 
